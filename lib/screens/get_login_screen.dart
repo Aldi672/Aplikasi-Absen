@@ -6,22 +6,9 @@ class GetLoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Row(
-              children: [
-                Image.asset(
-                  "asset/images/foto/shape1.png", // path ke PNG kamu
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                ),
-              ],
-            ),
-          ),
           SizedBox(
             width: double.infinity,
             child: Center(
@@ -36,7 +23,6 @@ class GetLoginScreen extends StatelessWidget {
                       // Logo
                       Image.asset("asset/images/foto/logo.png", height: 80),
                       SizedBox(height: 10),
-
                       Row(
                         children: [
                           SizedBox(width: 40),
@@ -50,7 +36,6 @@ class GetLoginScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       SizedBox(height: 20),
 
                       // Username

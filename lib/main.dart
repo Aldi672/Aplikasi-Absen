@@ -1,4 +1,4 @@
-import 'package:aplikasi_absen/screens/get_login_screen.dart';
+import 'package:aplikasi_absen/screens/get_register_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: GetLoginScreen(),
+      home: GetRegisterScreen(),
     );
   }
 }
