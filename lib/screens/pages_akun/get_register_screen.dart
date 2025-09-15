@@ -87,7 +87,7 @@ class GetRegisterScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 filled: true,
-                fillColor: Colors.grey[400],
+                fillColor: const Color.fromARGB(255, 255, 255, 255),
                 contentPadding: EdgeInsets.symmetric(vertical: 10),
               ),
             ),
@@ -96,7 +96,7 @@ class GetRegisterScreen extends StatelessWidget {
               obscureText: true,
               decoration: InputDecoration(
                 prefixIcon: Icon(Icons.lock_outline),
-                hintText: "Password",
+                hintText: "Confirm Password",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),

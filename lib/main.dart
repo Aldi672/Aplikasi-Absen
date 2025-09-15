@@ -1,4 +1,6 @@
-import 'package:aplikasi_absen/screens/get_register_screen.dart';
+import 'package:aplikasi_absen/screens/pages_akun/get_login_screen.dart';
+import 'package:aplikasi_absen/screens/pages_detail/get_dashboard_screen.dart';
+
 import 'package:flutter/material.dart';
 
 void main() {
@@ -18,7 +20,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: GetRegisterScreen(),
+      home: GetDashboardScreen(),
     );
   }
 }
