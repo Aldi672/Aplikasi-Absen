@@ -1,4 +1,5 @@
 import 'package:aplikasi_absen/screens/pages_akun/get_login_screen.dart';
+import 'package:aplikasi_absen/screens/pages_akun/get_register_screen.dart';
 import 'package:aplikasi_absen/screens/pages_detail/get_dashboard_screen.dart';
 
 import 'package:flutter/material.dart';
@@ -20,7 +21,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: GetDashboardScreen(),
+      initialRoute: GetLoginScreen.routeName,
+
+      routes: {
+        GetLoginScreen.routeName: (context) => const GetLoginScreen(),
+        GetRegisterScreen.routeName: (context) => const GetRegisterScreen(),
+      },
     );
   }
 }

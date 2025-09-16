@@ -1,3 +1,4 @@
+import 'package:aplikasi_absen/screens/pages_detail/get_history_screen.dart';
 import 'package:aplikasi_absen/screens/pages_draggble/draggable_scrollable_sheet_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -186,7 +187,69 @@ class GetDashboardScreen extends StatelessWidget {
               ),
 
               // Beri ruang kosong di bawah agar bisa di-scroll sampai sheet tidak menutupi tombol
-              const SizedBox(height: 200),
+              Container(
+                color: Colors.grey[100],
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Masuk',
+                    ),
+                    SizedBox(height: 16),
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Keluar',
+                    ),
+                    SizedBox(height: 16),
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Keluar',
+                    ),
+                    SizedBox(height: 16),
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Keluar',
+                    ),
+                    SizedBox(height: 16),
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Keluar',
+                    ),
+                    SizedBox(height: 16),
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Keluar',
+                    ),
+                    SizedBox(height: 16),
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Keluar',
+                    ),
+                    SizedBox(height: 90),
+                    AttendanceItem(
+                      date: 'Kamis, 14 Desember 2022',
+                      time: '15:56',
+                      status: 'Pending',
+                      type: 'Absen Keluar',
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
 

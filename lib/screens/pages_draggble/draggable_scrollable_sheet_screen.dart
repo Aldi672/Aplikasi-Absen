@@ -1,4 +1,8 @@
 // Jangan lupa tambahkan import ini di bagian atas
+
+import 'package:aplikasi_absen/screens/pages_detail/karyawan_content.dart';
+import 'package:aplikasi_absen/screens/pages_detail/leave_request_screen.dart';
+import 'package:aplikasi_absen/screens/pages_content/setting_content.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
@@ -19,9 +23,6 @@ class SheetContent extends StatefulWidget {
 }
 
 class _SheetContentState extends State<SheetContent> {
-  // --- STATE MANAGEMENT ---
-  // Variabel untuk melacak konten mana yang sedang aktif.
-  // 'Riwayat' adalah tampilan default.
   String _activeContent = 'Riwayat';
 
   // Fungsi untuk mengubah konten yang ditampilkan
@@ -117,116 +118,16 @@ class _SheetContentState extends State<SheetContent> {
   Widget _buildDynamicContent() {
     switch (_activeContent) {
       case 'Setting':
-        return const _SettingContent(); // Tampilkan konten setting
+        return const SettingContent(); // Tampilkan konten setting
       case 'Karyawan':
-        return const _KaryawanContent(); // Tampilkan konten karyawan
-      // Tambahkan case lain jika diperlukan
-      // case 'Jadwal':
-      //   return const _JadwalContent();
+        return const KaryawanContent(); // Tampilkan konten karyawan
+
       default:
-        return const _RiwayatAbsensiContent(); // Tampilan default
+        return const RiwayatAbsensiContent(); // Tampilan default
     }
   }
 }
 
-// === KONTEN-KONTEN DINAMIS ===
-// Kita pecah setiap konten agar rapi
-
-class _RiwayatAbsensiContent extends StatelessWidget {
-  const _RiwayatAbsensiContent();
-
-  @override
-  Widget build(BuildContext context) {
-    final List<AbsensiHistory> historyData = [
-      AbsensiHistory(
-        date: "Senin, 15 Sep 2025 : 16:30",
-        status: "Absen Keluar",
-      ),
-      AbsensiHistory(date: "Senin, 15 Sep 2025 : 08:01", status: "Absen Masuk"),
-      AbsensiHistory(
-        date: "Jumat, 12 Sep 2025 : 17:05",
-        status: "Absen Keluar",
-      ),
-      AbsensiHistory(date: "Jumat, 12 Sep 2025 : 07:55", status: "Absen Masuk"),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Riwayat Absensi",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 20),
-        ...historyData.map((history) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10.0),
-            child: _HistoryItem(date: history.date, status: history.status),
-          );
-        }).toList(),
-      ],
-    );
-  }
-}
-
-class _SettingContent extends StatelessWidget {
-  const _SettingContent();
-
-  @override
-  Widget build(BuildContext context) {
-    // Konten untuk menu Setting (contoh)
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text(
-          "Setting Aplikasi",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 16),
-        ListTile(leading: Icon(Icons.notifications), title: Text("Notifikasi")),
-        ListTile(leading: Icon(Icons.lock), title: Text("Privasi & Keamanan")),
-        ListTile(leading: Icon(Icons.language), title: Text("Bahasa")),
-      ],
-    );
-  }
-}
-
-class _KaryawanContent extends StatelessWidget {
-  const _KaryawanContent();
-
-  @override
-  Widget build(BuildContext context) {
-    // Konten untuk menu Karyawan (contoh)
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text(
-          "Daftar Karyawan",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 16),
-        ListTile(
-          leading: CircleAvatar(child: Text("AP")),
-          title: Text("Adena Putri"),
-          subtitle: Text("Manager"),
-        ),
-        ListTile(
-          leading: CircleAvatar(child: Text("BW")),
-          title: Text("Budi Waseso"),
-          subtitle: Text("Staff IT"),
-        ),
-        ListTile(
-          leading: CircleAvatar(child: Text("CS")),
-          title: Text("Citra Lestari"),
-          subtitle: Text("Staff HRD"),
-        ),
-      ],
-    );
-  }
-}
-
-// === WIDGET KECIL UNTUK ITEM MENU IKON ===
-// Diubah agar bisa diklik dan menunjukkan state aktif
 class _MenuIcon extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -267,50 +168,6 @@ class _MenuIcon extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// Widget _HistoryItem tidak perlu diubah
-// ... (tambahkan widget _HistoryItem dari kode sebelumnya)
-class _HistoryItem extends StatelessWidget {
-  final String date;
-  final String status;
-  // ... (kode sama seperti sebelumnya)
-
-  const _HistoryItem({required this.date, required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isMasuk = status.toLowerCase().contains('masuk');
-    final Color statusColor = isMasuk ? Colors.green : Colors.orange;
-
-    return Row(
-      children: [
-        Icon(Icons.access_time_filled, color: Colors.grey[400], size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            date,
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(
-              color: statusColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
