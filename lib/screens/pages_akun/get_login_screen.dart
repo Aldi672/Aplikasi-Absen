@@ -1,6 +1,7 @@
+import 'package:aplikasi_absen/api/get_api_user.dart';
 import 'package:aplikasi_absen/screens/pages_akun/get_register_screen.dart';
+import 'package:aplikasi_absen/screens/pages_detail/get_dashboard_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // Tambahkan package ini di pubspec.yaml
 
 // === WIDGET UTAMA HALAMAN LOGIN ===
 class GetLoginScreen extends StatefulWidget {
@@ -12,8 +13,50 @@ class GetLoginScreen extends StatefulWidget {
 }
 
 class _GetLoginScreenState extends State<GetLoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   // State untuk mengontrol visibilitas password
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    // Validasi input tidak kosong
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email dan password tidak boleh kosong')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true; // Tampilkan loading indicator
+    });
+
+    try {
+      // Panggil service API untuk login
+      await AuthService.loginUser(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      // Jika berhasil, navigasi ke halaman utama
+      // pushAndRemoveUntil akan menghapus semua halaman sebelumnya (user tidak bisa kembali ke login)
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const GetDashboardScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      // Tampilkan pesan error jika login gagal
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Login gagal: ${e.toString()}')));
+    } finally {
+      setState(() {
+        _isLoading = false; // Sembunyikan loading indicator
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +69,8 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
           height: size.height,
           child: Stack(
             children: [
-              // --- Latar Belakang & Header Melengkung ---
               _buildHeaderWave(size),
 
-              // --- Form Login ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
@@ -51,13 +92,11 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
     );
   }
 
-  // --- WIDGET BAGIAN-BAGIAN UI ---
-
   Widget _buildHeaderWave(Size size) {
     return ClipPath(
       clipper: WaveClipper(),
       child: Container(
-        height: size.height * 0.4, // Tinggi header 40% dari layar
+        height: size.height * 0.4,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [Color(0xFF3A86FF), Color(0xFF2C8DE0)],
@@ -84,9 +123,7 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(
-                height: 50,
-              ), // Spasi agar tidak terlalu dekat dengan form
+              const SizedBox(height: 50),
             ],
           ),
         ),
@@ -100,11 +137,15 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
       children: [
         // Username
         TextField(
-          decoration: _inputDecoration('Username', Icons.person_outline),
+          controller: _emailController, // Sambungkan controller
+          keyboardType: TextInputType.emailAddress,
+          decoration: _inputDecoration('Email', Icons.email_outlined),
         ),
         const SizedBox(height: 16),
         // Password
         TextField(
+          controller: _passwordController, // Sambungkan controller
+          keyboardType: TextInputType.visiblePassword,
           obscureText: !_isPasswordVisible,
           decoration: _inputDecoration('Password', Icons.lock_outline).copyWith(
             suffixIcon: IconButton(
@@ -132,9 +173,7 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
         const SizedBox(height: 16),
         // Tombol Login
         ElevatedButton(
-          onPressed: () {
-            // Aksi login
-          },
+          onPressed: _isLoading ? null : _login,
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF3A86FF),
             foregroundColor: Colors.white,
@@ -145,10 +184,19 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
             elevation: 5,
             shadowColor: const Color(0xFF3A86FF).withOpacity(0.4),
           ),
-          child: const Text(
-            "LOG IN",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 3,
+                  ),
+                )
+              : const Text(
+                  "LOG IN",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
         ),
       ],
     );

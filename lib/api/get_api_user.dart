@@ -1,7 +1,7 @@
 import 'dart:convert';
+
 import 'package:aplikasi_absen/api/endpoint/get_endpoint_user.dart';
 import 'package:aplikasi_absen/models/get_user_models.dart';
-import 'package:aplikasi_absen/screens/pages_akun/get_login_screen.dart';
 import 'package:aplikasi_absen/utils/preference/get_preference_save_token.dart';
 import 'package:http/http.dart' as http;
 
@@ -11,9 +11,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final url = Uri.parse(
-      '${ApiEndpoints.baseUrl}/login',
-    ); // Sesuaikan endpoint
+    final url = Uri.parse(ApiEndpoints.login); // Sesuaikan endpoint
 
     final response = await http.post(
       url,
@@ -43,8 +41,23 @@ class AuthService {
     required String name,
     required String email,
     required String password,
+    int? batchId,
+    int? trainingId,
+    String? gender,
   }) async {
     final url = Uri.parse(ApiEndpoints.register);
+
+    final Map<String, dynamic> requestBody = {
+      "name": name,
+      "email": email,
+      "password": password,
+      "batch_id": batchId,
+      "training_id": trainingId,
+      "jenis_kelamin": gender,
+    };
+
+    // Remove null values
+    requestBody.removeWhere((key, value) => value == null);
 
     final response = await http.post(
       url,
@@ -52,13 +65,11 @@ class AuthService {
         "Accept": "application/json",
         "Content-Type": "application/json",
       },
-      body: json.encode({"name": name, "email": email, "password": password}),
+      body: json.encode(requestBody),
     );
 
     if (response.statusCode == 200) {
       final registerUser = getRegisterUserFromJson(response.body);
-
-      // Simpan token dan user ID setelah register berhasil
       await PreferenceHandler.saveToken(registerUser.data?.token);
       await PreferenceHandler.saveUserId(registerUser.data?.user?.id);
       return registerUser;

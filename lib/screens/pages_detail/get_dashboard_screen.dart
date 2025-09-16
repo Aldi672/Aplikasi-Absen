@@ -3,6 +3,7 @@ import 'package:aplikasi_absen/screens/pages_draggble/draggable_scrollable_sheet
 import 'package:flutter/material.dart';
 
 class GetDashboardScreen extends StatelessWidget {
+  static const String routeName = '/dashboard';
   const GetDashboardScreen({super.key});
 
   @override

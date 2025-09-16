@@ -1,8 +1,10 @@
+import 'package:aplikasi_absen/api/get_api_batch.dart';
+import 'package:aplikasi_absen/api/get_api_trainings.dart';
 import 'package:aplikasi_absen/api/get_api_user.dart';
-import 'package:aplikasi_absen/models/get_user_models.dart';
+import 'package:aplikasi_absen/models/get_list_bacth_models.dart';
+import 'package:aplikasi_absen/models/get_list_trainings_models.dart';
 import 'package:aplikasi_absen/utils/preference/get_preference_save_token.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class GetRegisterScreen extends StatefulWidget {
   static const String routeName = '/register';
@@ -23,85 +25,52 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
   int? _selectedBatchId;
   int? _selectedTrainingId;
 
-  // Data batch dan training yang akan diambil dari API
-  List<Batch> _batchOptions = [];
-  List<Training> _trainingOptions = [];
-  Map<int, String> _batchMap = {}; // Map untuk menyimpan id dan nama batch
-  Map<int, String> _trainingMap =
-      {}; // Map untuk menyimpan id dan nama training
+  // --- PERUBAHAN DIMULAI DI SINI ---
+  // Variabel state untuk menampung data dari API
+  List<TitleBacth> _batchOptions = [];
+  List<Datum> _trainingOptions = [];
+  // --- PERUBAHAN SELESAI ---
 
   @override
   void initState() {
     super.initState();
-    // Panggil fungsi untuk mendapatkan data batch dan training
-    _loadBatchAndTrainingData();
+    // Panggil fungsi untuk mendapatkan data batch dan training dari API saat halaman dimuat
+    _loadInitialData();
   }
 
-  // Fungsi untuk mendapatkan data batch dan training dari API
-  Future<void> _loadBatchAndTrainingData() async {
-    // Dalam implementasi nyata, ini akan memanggil API untuk mendapatkan data
-    // Untuk sementara kita buat data dummy sesuai dengan struktur model
-
+  // --- PERUBAHAN DIMULAI DI SINI ---
+  // Fungsi baru untuk mengambil data batch dan training dari API secara online
+  Future<void> _loadInitialData() async {
     setState(() {
-      // Data batch contoh
-      _batchOptions = [
-        Batch(
-          id: 1,
-          batchKe: "Batch 01",
-          startDate: DateTime(2023, 1, 1),
-          endDate: DateTime(2023, 12, 31),
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-        Batch(
-          id: 2,
-          batchKe: "Batch 02",
-          startDate: DateTime(2023, 2, 1),
-          endDate: DateTime(2023, 12, 31),
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-        Batch(
-          id: 3,
-          batchKe: "Batch 03",
-          startDate: DateTime(2023, 3, 1),
-          endDate: DateTime(2023, 12, 31),
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      ];
-
-      // Data training contoh
-      _trainingOptions = [
-        Training(
-          id: 1,
-          title: "Flutter Development",
-          description: "Pelatihan pengembangan aplikasi Flutter",
-          participantCount: 30,
-          standard: "Intermediate",
-          duration: 90,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-        Training(
-          id: 2,
-          title: "UI/UX Design",
-          description: "Pelatihan desain antarmuka pengguna",
-          participantCount: 25,
-          standard: "Beginner",
-          duration: 60,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      ];
-
-      // Buat mapping untuk dropdown
-      _batchMap = {for (var batch in _batchOptions) batch.id!: batch.batchKe!};
-      _trainingMap = {
-        for (var training in _trainingOptions) training.id!: training.title!,
-      };
+      _isLoading = true; // Tampilkan loading indicator saat fetching data
     });
+
+    try {
+      // Mengambil data batch dan training secara bersamaan
+      final results = await Future.wait([
+        BatchService.getBatches(),
+        TrainingService.getTrainings(),
+      ]);
+
+      final batchResponse = results[0] as Bacth;
+      final trainingResponse = results[1] as Trainings;
+
+      setState(() {
+        _batchOptions = batchResponse.data ?? [];
+        _trainingOptions = trainingResponse.data ?? [];
+      });
+    } catch (e) {
+      // Tampilkan pesan error jika gagal mengambil data
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
+    } finally {
+      setState(() {
+        _isLoading = false; // Hentikan loading indicator
+      });
+    }
   }
+  // --- PERUBAHAN SELESAI ---
 
   Future<void> _register() async {
     // Validasi form
@@ -121,15 +90,23 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
     });
 
     try {
+      // --- PERUBAHAN DIMULAI DI SINI ---
+      // Mengirim semua data yang diperlukan ke API, termasuk ID batch dan training
       final response = await AuthService.registerUser(
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
+        gender: _selectedGender,
+        batchId: _selectedBatchId,
+        trainingId: _selectedTrainingId, // Bisa null jika tidak dipilih
       );
+      // --- PERUBAHAN SELESAI ---
 
       // Simpan data user ke preferences
-      await UserPreferences.saveUserData(response.data!.user!);
-      await UserPreferences.saveUserEmail(_emailController.text);
+      if (response.data?.user != null) {
+        await UserPreferences.saveUserData(response.data!.user!);
+        await UserPreferences.saveUserEmail(_emailController.text);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registrasi berhasil: ${response.message}')),
@@ -159,8 +136,6 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 24),
-
-              // Header
               const Text(
                 "Buat Akun Baru",
                 style: TextStyle(
@@ -175,9 +150,6 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 40),
-
-              // Form Registrasi
-              // Nama Lengkap
               TextField(
                 controller: _nameController,
                 decoration: _inputDecoration(
@@ -186,27 +158,17 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Email
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: _inputDecoration("Email", Icons.email_outlined),
               ),
               const SizedBox(height: 20),
-
-              // Jenis Kelamin
               DropdownButtonFormField<String>(
                 value: _selectedGender,
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Laki-laki',
-                    child: Text('Laki-laki'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Perempuan',
-                    child: Text('Perempuan'),
-                  ),
+                  DropdownMenuItem(value: 'L', child: Text('Laki-laki')),
+                  DropdownMenuItem(value: 'P', child: Text('Perempuan')),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -217,41 +179,47 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Batch
+              // --- PERUBAHAN DIMULAI DI SINI ---
+              // Dropdown untuk Batch, mengambil data dari _batchOptions
               DropdownButtonFormField<int>(
                 value: _selectedBatchId,
-                items: _batchMap.entries.map((entry) {
-                  return DropdownMenuItem<int>(
-                    value: entry.key,
-                    child: Text(entry.value),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedBatchId = value;
-                  });
-                },
                 decoration: _inputDecoration(
                   "Pilih Batch",
                   Icons.badge_outlined,
                 ),
+                items: _batchOptions.map((batch) {
+                  return DropdownMenuItem<int>(
+                    value: batch.id,
+                    child: Text(batch.batchKe ?? 'Batch tidak diketahui'),
+                  );
+                }).toList(),
+                onChanged: (int? value) {
+                  setState(() {
+                    _selectedBatchId = value;
+                  });
+                },
               ),
+
+              // --- PERUBAHAN SELESAI ---
               const SizedBox(height: 20),
 
-              // Training (opsional)
+              // --- PERUBAHAN DIMULAI DI SINI ---
+              // Dropdown untuk Training (opsional), mengambil data dari _trainingOptions
               DropdownButtonFormField<int>(
                 value: _selectedTrainingId,
                 items: [
+                  // Item pertama sebagai placeholder opsional
                   const DropdownMenuItem<int>(
                     value: null,
                     child: Text('Pilih Training (opsional)'),
                   ),
-                  ..._trainingMap.entries.map((entry) {
+                  // Menyebarkan daftar training dari API
+                  ..._trainingOptions.map((training) {
                     return DropdownMenuItem<int>(
-                      value: entry.key,
-                      child: Text(entry.value),
+                      value: training.id,
+                      child: Text(training.title ?? 'Training tidak diketahui'),
                     );
-                  }).toList(),
+                  }),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -263,9 +231,9 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                   Icons.school_outlined,
                 ),
               ),
-              const SizedBox(height: 20),
 
-              // Password
+              // --- PERUBAHAN SELESAI ---
+              const SizedBox(height: 20),
               TextField(
                 controller: _passwordController,
                 obscureText: !_isPasswordVisible,
@@ -287,8 +255,6 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                     ),
               ),
               const SizedBox(height: 40),
-
-              // Tombol Daftar
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -303,7 +269,14 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                     elevation: 2,
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
                       : const Text(
                           "DAFTAR SEKARANG",
                           style: TextStyle(
@@ -314,8 +287,6 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Link untuk Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
