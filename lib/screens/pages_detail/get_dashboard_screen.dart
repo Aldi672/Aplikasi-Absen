@@ -1,11 +1,42 @@
+import 'package:aplikasi_absen/api/get_api_user.dart';
+import 'package:aplikasi_absen/models/get_user_models.dart';
 import 'package:aplikasi_absen/screens/pages_content/location_content.dart';
 import 'package:aplikasi_absen/screens/pages_detail/get_history_screen.dart';
 import 'package:aplikasi_absen/screens/pages_draggble/draggable_scrollable_sheet_screen.dart';
 import 'package:flutter/material.dart';
 
-class GetDashboardScreen extends StatelessWidget {
+class GetDashboardScreen extends StatefulWidget {
   static const String routeName = '/dashboard';
   const GetDashboardScreen({super.key});
+
+  @override
+  State<GetDashboardScreen> createState() => _GetDashboardScreenState();
+}
+
+class _GetDashboardScreenState extends State<GetDashboardScreen> {
+  GetUser? userData;
+  bool isLoading = true;
+  String errorMessage = '';
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final data = await AuthService.getUserProfile();
+      setState(() {
+        userData = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,24 +111,51 @@ class GetDashboardScreen extends StatelessWidget {
                                 CircleAvatar(
                                   radius: 30,
                                   backgroundColor: Colors.grey[200],
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 40,
-                                    color: Colors.teal,
-                                  ),
+                                  backgroundImage:
+                                      (userData?.data?.profilePhotoUrl ?? '')
+                                          .isNotEmpty
+                                      ? NetworkImage(
+                                          userData!.data!.profilePhotoUrl!,
+                                        )
+                                      : null,
+                                  child:
+                                      (userData?.data?.profilePhotoUrl ?? '')
+                                          .isEmpty
+                                      ? const Icon(
+                                          Icons.person,
+                                          size: 40,
+                                          color: Colors.teal,
+                                        )
+                                      : null,
                                 ),
                                 const SizedBox(width: 15),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
+                                  children: [
                                     Text(
-                                      "Adena Ayu Putrikarso",
-                                      style: TextStyle(
+                                      userData?.data?.name ??
+                                          "Nama tidak tersedia",
+                                      style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    Text("Manager"),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          userData?.data?.batchKe ??
+                                              "Batch Tidak Tersedia",
+                                        ),
+
+                                        Text(
+                                          userData?.data?.trainingTitle ??
+                                              "Trainings Tidak di Temukan",
+                                          style: const TextStyle(fontSize: 9),
+                                        ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ],

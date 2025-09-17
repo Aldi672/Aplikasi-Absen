@@ -1,78 +1,114 @@
 // To parse this JSON data, do
 //
-//     final getUser = getUserFromJson(jsonString);
+//     final getRegisterUser = getRegisterUserFromJson(jsonString);
 
 import 'dart:convert';
 
-GetUser getUserFromJson(String str) => GetUser.fromJson(json.decode(str));
+GetRegisterUser getRegisterUserFromJson(String str) =>
+    GetRegisterUser.fromJson(json.decode(str));
 
-String getUserToJson(GetUser data) => json.encode(data.toJson());
+String getRegisterUserToJson(GetRegisterUser data) =>
+    json.encode(data.toJson());
 
-class GetUser {
+class GetRegisterUser {
   String? message;
   Data? data;
 
-  GetUser({this.message, this.data});
+  GetRegisterUser({this.message, this.data});
 
-  factory GetUser.fromJson(Map<String, dynamic> json) => GetUser(
-    message: json["message"],
-    data: json["data"] == null ? null : Data.fromJson(json["data"]),
-  );
+  factory GetRegisterUser.fromJson(Map<String, dynamic> json) =>
+      GetRegisterUser(
+        message: json["message"],
+        data: json["data"] == null ? null : Data.fromJson(json["data"]),
+      );
 
   Map<String, dynamic> toJson() => {"message": message, "data": data?.toJson()};
 }
 
 class Data {
-  int? id;
-  String? name;
-  String? email;
-  String? batchKe;
-  String? trainingTitle;
-  Batch? batch;
-  Training? training;
-  dynamic jenisKelamin;
-  String? profilePhoto;
+  String? token;
+  User? user;
   String? profilePhotoUrl;
 
-  Data({
-    this.id,
-    this.name,
-    this.email,
-    this.batchKe,
-    this.trainingTitle,
-    this.batch,
-    this.training,
-    this.jenisKelamin,
-    this.profilePhoto,
-    this.profilePhotoUrl,
-  });
+  Data({this.token, this.user, this.profilePhotoUrl});
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    id: json["id"],
-    name: json["name"],
-    email: json["email"],
-    batchKe: json["batch_ke"],
-    trainingTitle: json["training_title"],
-    batch: json["batch"] == null ? null : Batch.fromJson(json["batch"]),
-    training: json["training"] == null
-        ? null
-        : Training.fromJson(json["training"]),
-    jenisKelamin: json["jenis_kelamin"],
-    profilePhoto: json["profile_photo"],
+    token: json["token"],
+    user: json["user"] == null ? null : User.fromJson(json["user"]),
     profilePhotoUrl: json["profile_photo_url"],
   );
 
   Map<String, dynamic> toJson() => {
-    "id": id,
+    "token": token,
+    "user": user?.toJson(),
+    "profile_photo_url": profilePhotoUrl,
+  };
+}
+
+class User {
+  String? name;
+  String? email;
+  int? batchId;
+  int? trainingId;
+  String? jenisKelamin;
+  String? profilePhoto;
+  DateTime? updatedAt;
+  DateTime? createdAt;
+  int? id;
+  Batch? batch;
+  Training? training;
+
+  User({
+    this.name,
+    this.email,
+    this.batchId,
+    this.trainingId,
+    this.jenisKelamin,
+    this.profilePhoto,
+    this.updatedAt,
+    this.createdAt,
+    this.id,
+    this.batch,
+    this.training,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) => User(
+    name: json["name"],
+    email: json["email"],
+    batchId: json["batch_id"] == null
+        ? null
+        : int.tryParse(json["batch_id"].toString()),
+    trainingId: json["training_id"] == null
+        ? null
+        : int.tryParse(json["training_id"].toString()),
+
+    jenisKelamin: json["jenis_kelamin"],
+    profilePhoto: json["profile_photo"],
+    updatedAt: json["updated_at"] == null
+        ? null
+        : DateTime.parse(json["updated_at"]),
+    createdAt: json["created_at"] == null
+        ? null
+        : DateTime.parse(json["created_at"]),
+    id: json["id"],
+    batch: json["batch"] == null ? null : Batch.fromJson(json["batch"]),
+    training: json["training"] == null
+        ? null
+        : Training.fromJson(json["training"]),
+  );
+
+  Map<String, dynamic> toJson() => {
     "name": name,
     "email": email,
-    "batch_ke": batchKe,
-    "training_title": trainingTitle,
-    "batch": batch?.toJson(),
-    "training": training?.toJson(),
+    "batch_id": batchId,
+    "training_id": trainingId,
     "jenis_kelamin": jenisKelamin,
     "profile_photo": profilePhoto,
-    "profile_photo_url": profilePhotoUrl,
+    "updated_at": updatedAt?.toIso8601String(),
+    "created_at": createdAt?.toIso8601String(),
+    "id": id,
+    "batch": batch?.toJson(),
+    "training": training?.toJson(),
   };
 }
 

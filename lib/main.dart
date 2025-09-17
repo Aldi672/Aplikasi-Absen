@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: GetRegisterScreen.routeName,
+      initialRoute: WelcomeScreen.routeName,
 
       routes: {
         GetLoginScreen.routeName: (context) => const GetLoginScreen(),

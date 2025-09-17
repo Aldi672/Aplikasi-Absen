@@ -1,4 +1,4 @@
-import 'package:aplikasi_absen/models/get_user_models.dart';
+import 'package:aplikasi_absen/models/get_register_models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferenceHandler {
