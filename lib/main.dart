@@ -1,6 +1,7 @@
 import 'package:aplikasi_absen/screens/pages_akun/get_login_screen.dart';
 import 'package:aplikasi_absen/screens/pages_akun/get_register_screen.dart';
 import 'package:aplikasi_absen/screens/pages_detail/get_dashboard_screen.dart';
+import 'package:aplikasi_absen/screens/pages_detail/splash_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -20,12 +21,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      initialRoute: GetLoginScreen.routeName,
+      initialRoute: GetRegisterScreen.routeName,
 
       routes: {
         GetLoginScreen.routeName: (context) => const GetLoginScreen(),
         GetRegisterScreen.routeName: (context) => const GetRegisterScreen(),
         GetDashboardScreen.routeName: (context) => const GetDashboardScreen(),
+        WelcomeScreen.routeName: (context) => const WelcomeScreen(),
       },
     );
   }

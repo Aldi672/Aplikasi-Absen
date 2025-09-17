@@ -1,3 +1,4 @@
+import 'package:aplikasi_absen/screens/pages_content/location_content.dart';
 import 'package:aplikasi_absen/screens/pages_detail/get_history_screen.dart';
 import 'package:aplikasi_absen/screens/pages_draggble/draggable_scrollable_sheet_screen.dart';
 import 'package:flutter/material.dart';
@@ -137,15 +138,8 @@ class GetDashboardScreen extends StatelessWidget {
               const SizedBox(height: 110), // Spasi agar tidak tertutup Card
               // Map Lokasi
               Padding(
-                padding: const EdgeInsets.all(15.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Container(
-                    height: 150,
-                    color: Colors.grey[300],
-                    child: const Center(child: Text("Map Lokasi")),
-                  ),
-                ),
+                padding: EdgeInsetsGeometry.all(20),
+                child: LocationCard(),
               ),
 
               // Jam + Tombol

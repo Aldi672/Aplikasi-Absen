@@ -60,4 +60,24 @@ class UserPreferences {
       'photo': prefs.getString('user_photo') ?? '',
     };
   }
+
+  static Future<void> saveUserImagePath(String imagePath) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_image_path', imagePath);
+  }
+
+  static Future<String?> getUserImagePath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_image_path');
+  }
+
+  static Future<void> saveUserBatch(String batchName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('user_batch', batchName);
+  }
+
+  static Future<String?> getUserBatch() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_batch');
+  }
 }

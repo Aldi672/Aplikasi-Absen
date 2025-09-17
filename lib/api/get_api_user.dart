@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:aplikasi_absen/api/endpoint/get_endpoint_user.dart';
 import 'package:aplikasi_absen/models/get_user_models.dart';
@@ -44,9 +45,10 @@ class AuthService {
     int? batchId,
     int? trainingId,
     String? gender,
+    File? image,
   }) async {
     final url = Uri.parse(ApiEndpoints.register);
-
+    var request = http.MultipartRequest('POST', url);
     final Map<String, dynamic> requestBody = {
       "name": name,
       "email": email,
@@ -54,6 +56,7 @@ class AuthService {
       "batch_id": batchId,
       "training_id": trainingId,
       "jenis_kelamin": gender,
+      "profile_photo": image,
     };
 
     // Remove null values

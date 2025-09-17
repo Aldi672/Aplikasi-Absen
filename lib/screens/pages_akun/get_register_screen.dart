@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:aplikasi_absen/api/get_api_batch.dart';
 import 'package:aplikasi_absen/api/get_api_trainings.dart';
 import 'package:aplikasi_absen/api/get_api_user.dart';
@@ -5,6 +7,7 @@ import 'package:aplikasi_absen/models/get_list_bacth_models.dart';
 import 'package:aplikasi_absen/models/get_list_trainings_models.dart';
 import 'package:aplikasi_absen/utils/preference/get_preference_save_token.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class GetRegisterScreen extends StatefulWidget {
   static const String routeName = '/register';
@@ -24,6 +27,7 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
   String? _selectedGender;
   int? _selectedBatchId;
   int? _selectedTrainingId;
+  File? _selectedImage;
 
   // --- PERUBAHAN DIMULAI DI SINI ---
   // Variabel state untuk menampung data dari API
@@ -36,6 +40,28 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
     super.initState();
     // Panggil fungsi untuk mendapatkan data batch dan training dari API saat halaman dimuat
     _loadInitialData();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<void> _takeImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
   }
 
   // --- PERUBAHAN DIMULAI DI SINI ---
@@ -61,9 +87,7 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
       });
     } catch (e) {
       // Tampilkan pesan error jika gagal mengambil data
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     } finally {
       setState(() {
         _isLoading = false; // Hentikan loading indicator
@@ -98,7 +122,8 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
         password: _passwordController.text,
         gender: _selectedGender,
         batchId: _selectedBatchId,
-        trainingId: _selectedTrainingId, // Bisa null jika tidak dipilih
+        trainingId: _selectedTrainingId,
+        image: _selectedImage,
       );
       // --- PERUBAHAN SELESAI ---
 
@@ -107,7 +132,9 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
         await UserPreferences.saveUserData(response.data!.user!);
         await UserPreferences.saveUserEmail(_emailController.text);
       }
-
+      if (_selectedImage != null) {
+        await UserPreferences.saveUserImagePath(_selectedImage!.path);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registrasi berhasil: ${response.message}')),
       );
@@ -144,12 +171,35 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                   color: Color(0xFF0D47A1),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 24),
               Text(
                 "Isi data diri Anda untuk mulai menggunakan aplikasi",
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: _showImagePickerOptions,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: Colors.grey.shade200,
+                  backgroundImage: _selectedImage != null
+                      ? FileImage(_selectedImage!)
+                      : null,
+                  child: _selectedImage == null
+                      ? const Icon(
+                          Icons.camera_alt,
+                          size: 40,
+                          color: Colors.grey,
+                        )
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _showImagePickerOptions,
+                child: const Text('Pilih Foto Profil'),
+              ),
+              const SizedBox(height: 10),
               TextField(
                 controller: _nameController,
                 decoration: _inputDecoration(
@@ -157,6 +207,7 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                   Icons.person_outline,
                 ),
               ),
+
               const SizedBox(height: 20),
               TextField(
                 controller: _emailController,
@@ -307,6 +358,36 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Pilih dari Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Ambil Foto'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _takeImage();
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
