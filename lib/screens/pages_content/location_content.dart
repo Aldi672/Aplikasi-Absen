@@ -18,7 +18,8 @@ class _LocationCardState extends State<LocationCard> {
       "Tekan tombol untuk mendapatkan lokasi & alamat Anda.";
   Marker? _marker;
   bool _isLoading = false;
-
+  LatLng get currentPosition => _currentPosition;
+  String get currentAddress => _currentAddress;
   @override
   Widget build(BuildContext context) {
     return Card(

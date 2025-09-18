@@ -1,9 +1,13 @@
+import 'package:aplikasi_absen/api/get_api_absen.dart';
 import 'package:aplikasi_absen/api/get_api_user.dart';
+import 'package:aplikasi_absen/models/get_absen_today_models.dart'
+    as AbsenToday;
 import 'package:aplikasi_absen/models/get_user_models.dart';
 import 'package:aplikasi_absen/screens/pages_content/location_content.dart';
 import 'package:aplikasi_absen/screens/pages_detail/get_history_screen.dart';
 import 'package:aplikasi_absen/screens/pages_draggble/draggable_scrollable_sheet_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class GetDashboardScreen extends StatefulWidget {
   static const String routeName = '/dashboard';
@@ -14,28 +18,259 @@ class GetDashboardScreen extends StatefulWidget {
 }
 
 class _GetDashboardScreenState extends State<GetDashboardScreen> {
+  final GlobalKey<State<LocationCard>> _locationCardKey =
+      GlobalKey<State<LocationCard>>();
+
   GetUser? userData;
-  bool isLoading = true;
-  String errorMessage = '';
+  AbsenToday.Data? _absenData;
+  bool _isLoadingProfile = true;
+  bool _isFetchingAttendance = true;
+  bool _isCheckingIn = false; // State untuk loading saat check-in
+  String _errorMessage = '';
   @override
   void initState() {
     super.initState();
-    _fetchUserData();
+    _fetchInitialData();
+  }
+
+  Future<void> _fetchInitialData() async {
+    await _fetchUserData();
+    await _fetchTodaysAttendance();
   }
 
   Future<void> _fetchUserData() async {
     try {
       final data = await AuthService.getUserProfile();
-      setState(() {
-        userData = data;
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          userData = data;
+          _isLoadingProfile = false;
+        });
+      }
     } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoadingProfile = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchTodaysAttendance() async {
+    if (mounted) {
       setState(() {
-        errorMessage = e.toString();
-        isLoading = false;
+        _isFetchingAttendance = true;
       });
     }
+    try {
+      final data = await AttendanceService.getTodaysAttendance();
+      if (mounted) {
+        setState(() {
+          _absenData = data.data;
+        });
+      }
+    } catch (e) {
+      // Tidak apa-apa jika ada error (misal: 404), artinya belum absen
+      // Kita set _absenData menjadi null
+      if (mounted) {
+        setState(() {
+          _absenData = null;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFetchingAttendance = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleAttendanceAction({required String status}) async {
+    setState(() {
+      _isCheckingIn = true;
+    });
+
+    try {
+      if (status == 'hadir') {
+        // Logika untuk Absen Hadir (membutuhkan lokasi)
+        final locationState = _locationCardKey.currentState as dynamic;
+        final lat = locationState.currentPosition.latitude;
+        final lng = locationState.currentPosition.longitude;
+        final address = locationState.currentAddress;
+
+        if (address.contains("Tekan tombol") ||
+            address.contains("Gagal mendapatkan")) {
+          throw Exception(
+            "Lokasi belum didapatkan. Mohon tekan tombol 'Lokasi Terkini' terlebih dahulu.",
+          );
+        }
+
+        await AttendanceService.checkIn(
+          status: 'hadir',
+          latitude: lat,
+          longitude: lng,
+          address: address,
+        );
+      } else if (status == 'izin') {
+        // Logika untuk Izin (membutuhkan alasan dari dialog)
+        final String? alasan = await _showIzinDialog();
+        if (alasan == null || alasan.isEmpty) {
+          // Jika pengguna membatalkan atau tidak mengisi alasan
+          setState(() => _isCheckingIn = false);
+          return; // Hentikan proses
+        }
+
+        await AttendanceService.checkIn(status: 'izin', alasanIzin: alasan);
+      }
+
+      // Setelah berhasil, refresh data dan tampilkan notifikasi
+      await _fetchTodaysAttendance();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Berhasil mengirimkan status: $status"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isCheckingIn = false;
+      });
+    }
+  }
+
+  // Method baru untuk menampilkan dialog Izin
+  Future<String?> _showIzinDialog() {
+    final TextEditingController alasanController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Ajukan Izin'),
+          content: TextField(
+            controller: alasanController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Masukkan alasan Anda di sini',
+            ),
+            maxLines: 3,
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('BATAL'),
+              onPressed: () {
+                Navigator.pop(context); // Tutup dialog tanpa mengirim data
+              },
+            ),
+            ElevatedButton(
+              child: const Text('KIRIM'),
+              onPressed: () {
+                // Tutup dialog dan kirim teks dari controller
+                Navigator.pop(context, alasanController.text);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAbsenHariIniCard() {
+    if (_isFetchingAttendance) {
+      return const SizedBox(
+        height: 120,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_absenData == null) {
+      return Container(
+        height: 120,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10.0)],
+        ),
+        child: const Center(
+          child: Text(
+            "Anda belum melakukan absensi hari ini.",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // Jika data ada, tampilkan
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10.0)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Absensi Hari Ini (${DateFormat('EEEE, dd MMMM y', 'id_ID').format(_absenData!.attendanceDate)})",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const Divider(height: 20),
+          _buildInfoRow(
+            icon: Icons.login,
+            label: "Check-in",
+            value: _absenData!.checkInTime,
+            color: Colors.green,
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            icon: Icons.logout,
+            label: "Check-out",
+            value: _absenData!.checkOutTime ?? "Belum check-out",
+            color: Colors.red,
+          ),
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            icon: Icons.location_on,
+            label: "Alamat Masuk",
+            value: _absenData!.checkInAddress,
+            color: Colors.blue,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Text("$label: ", style: const TextStyle(fontWeight: FontWeight.w600)),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(color: Colors.black87),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -92,144 +327,100 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                   ),
 
                   // Card Profil
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: -100,
-                    child: Card(
-                      elevation: 5,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      // ... isi Card Anda tetap sama
-                      child: Padding(
-                        padding: const EdgeInsets.all(15.0),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundColor: Colors.grey[200],
-                                  backgroundImage:
-                                      (userData?.data?.profilePhotoUrl ?? '')
-                                          .isNotEmpty
-                                      ? NetworkImage(
-                                          userData!.data!.profilePhotoUrl!,
-                                        )
-                                      : null,
-                                  child:
-                                      (userData?.data?.profilePhotoUrl ?? '')
-                                          .isEmpty
-                                      ? const Icon(
-                                          Icons.person,
-                                          size: 40,
-                                          color: Colors.teal,
-                                        )
-                                      : null,
-                                ),
-                                const SizedBox(width: 15),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      userData?.data?.name ??
-                                          "Nama tidak tersedia",
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          userData?.data?.batchKe ??
-                                              "Batch Tidak Tersedia",
-                                        ),
-
-                                        Text(
-                                          userData?.data?.trainingTitle ??
-                                              "Trainings Tidak di Temukan",
-                                          style: const TextStyle(fontSize: 9),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: const [
-                                _StatBox(
-                                  label: "Hadir",
-                                  value: "28",
-                                  color: Colors.green,
-                                ),
-                                _StatBox(
-                                  label: "Sakit",
-                                  value: "8",
-                                  color: Colors.blue,
-                                ),
-                                _StatBox(
-                                  label: "Izin",
-                                  value: "3",
-                                  color: Colors.orange,
-                                ),
-                                _StatBox(
-                                  label: "Absen",
-                                  value: "50",
-                                  color: Colors.red,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 110), // Spasi agar tidak tertutup Card
               // Map Lokasi
               Padding(
-                padding: EdgeInsetsGeometry.all(20),
-                child: LocationCard(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: LocationCard(key: _locationCardKey),
               ),
 
               // Jam + Tombol
-              const Text(
-                "07:23 AM",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              // Widget untuk menampilkan data absen hari ini
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 25),
+                child: _buildAbsenHariIniCard(),
               ),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(
+                  // TOMBOL HADIR
+                  ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
-                    onPressed: () {},
-                    child: const Text("HADIR"),
+                    onPressed:
+                        _isCheckingIn ||
+                            (_absenData != null &&
+                                _absenData?.checkInTime != null)
+                        ? null // Disable jika sedang loading atau sudah absen
+                        : () => _handleAttendanceAction(status: 'hadir'),
+                    icon: const Icon(Icons.touch_app, color: Colors.white),
+                    label: const Text(
+                      "HADIR",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 10),
-                  ElevatedButton(
+
+                  // TOMBOL IZIN BARU
+                  ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Colors.blue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                     ),
-                    onPressed: () {},
-                    child: const Text("LAMPIRAN"),
+                    onPressed:
+                        _isCheckingIn ||
+                            (_absenData != null &&
+                                _absenData?.checkInTime != null)
+                        ? null // Disable jika sedang loading atau sudah absen
+                        : () => _handleAttendanceAction(status: 'izin'),
+                    icon: const Icon(Icons.edit_document, color: Colors.white),
+                    label: const Text(
+                      "IZIN",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                    onPressed: () {}, // Logika untuk pulang
+                    child: const Text(
+                      "PULANG",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
