@@ -49,7 +49,12 @@ class AuthService {
     File? image,
   }) async {
     final url = Uri.parse(ApiEndpoints.register);
-    var request = http.MultipartRequest('POST', url);
+    String? base64Image;
+    if (image != null) {
+      List<int> imageBytes = await image.readAsBytes();
+      base64Image = base64Encode(imageBytes);
+    }
+
     final Map<String, dynamic> requestBody = {
       "name": name,
       "email": email,
@@ -57,7 +62,7 @@ class AuthService {
       "batch_id": batchId,
       "training_id": trainingId,
       "jenis_kelamin": gender,
-      "profile_photo": image,
+      "profile_photo": base64Image, // Kirim sebagai string base64
     };
 
     // Remove null values
@@ -84,30 +89,14 @@ class AuthService {
   }
 
   static Future<GetUser> getUserProfile() async {
-    // Ambil token yang sudah tersimpan
     final token = await PreferenceHandler.getToken();
-    if (token == null) {
-      throw Exception("Token tidak ditemukan, silahkan login ulang.");
-    }
-
+    if (token == null) throw Exception("Token tidak ditemukan");
     final url = Uri.parse(ApiEndpoints.profile);
-
     final response = await http.get(
       url,
-      headers: {
-        "Accept": "application/json",
-        // Kirim token untuk otorisasi
-        "Authorization": "Bearer $token",
-      },
+      headers: {"Accept": "application/json", "Authorization": "Bearer $token"},
     );
-
-    if (response.statusCode == 200) {
-      // Jika berhasil, parse data dan kembalikan
-      return getUserFromJson(response.body);
-    } else {
-      // Jika gagal, tampilkan pesan error
-      final error = json.decode(response.body);
-      throw Exception(error["message"] ?? "Gagal mengambil data profil");
-    }
+    if (response.statusCode == 200) return getUserFromJson(response.body);
+    throw Exception("Gagal mengambil profil");
   }
 }

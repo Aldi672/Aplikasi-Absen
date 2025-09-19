@@ -1,3 +1,6 @@
+// ignore_for_file: deprecated_member_use
+
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:aplikasi_absen/api/get_api_batch.dart';
@@ -28,6 +31,7 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
   int? _selectedBatchId;
   int? _selectedTrainingId;
   File? _selectedImage;
+  final picker = ImagePicker();
 
   // --- PERUBAHAN DIMULAI DI SINI ---
   // Variabel state untuk menampung data dari API
@@ -43,7 +47,6 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
@@ -114,8 +117,6 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
     });
 
     try {
-      // --- PERUBAHAN DIMULAI DI SINI ---
-      // Mengirim semua data yang diperlukan ke API, termasuk ID batch dan training
       final response = await AuthService.registerUser(
         name: _nameController.text,
         email: _emailController.text,
@@ -132,6 +133,7 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
         await UserPreferences.saveUserData(response.data!.user!);
         await UserPreferences.saveUserEmail(_emailController.text);
       }
+
       if (_selectedImage != null) {
         await UserPreferences.saveUserImagePath(_selectedImage!.path);
       }

@@ -64,6 +64,7 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: SingleChildScrollView(
         child: SizedBox(
           height: size.height,
@@ -77,7 +78,7 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Spacer(flex: 4),
+                    Spacer(flex: 3),
                     _buildLoginForm(),
                     SizedBox(height: 5),
                     _buildSignupLink(),

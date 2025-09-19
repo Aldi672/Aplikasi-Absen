@@ -16,7 +16,8 @@ class AbsensiHistory {
 // === WIDGET UTAMA KONTEN SHEET ===
 // Diubah menjadi StatefulWidget agar bisa mengelola konten dinamis
 class SheetContent extends StatefulWidget {
-  const SheetContent({super.key});
+  final VoidCallback? onProfileUpdated;
+  const SheetContent({super.key, this.onProfileUpdated});
 
   @override
   State<SheetContent> createState() => _SheetContentState();

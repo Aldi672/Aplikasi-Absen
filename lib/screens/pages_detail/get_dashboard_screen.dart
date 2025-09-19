@@ -4,7 +4,7 @@ import 'package:aplikasi_absen/models/get_absen_today_models.dart'
     as AbsenToday;
 import 'package:aplikasi_absen/models/get_user_models.dart';
 import 'package:aplikasi_absen/screens/pages_content/location_content.dart';
-import 'package:aplikasi_absen/screens/pages_detail/get_history_screen.dart';
+import 'package:aplikasi_absen/screens/pages_content/statistic_display_content.dart';
 import 'package:aplikasi_absen/screens/pages_draggble/draggable_scrollable_sheet_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +18,7 @@ class GetDashboardScreen extends StatefulWidget {
 }
 
 class _GetDashboardScreenState extends State<GetDashboardScreen> {
+  final DateTime _tanggalAbsensi = DateTime.now();
   final GlobalKey<State<LocationCard>> _locationCardKey =
       GlobalKey<State<LocationCard>>();
 
@@ -25,8 +26,10 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
   AbsenToday.Data? _absenData;
   bool _isLoadingProfile = true;
   bool _isFetchingAttendance = true;
-  bool _isCheckingIn = false; // State untuk loading saat check-in
+  bool _isCheckingIn = false;
+  bool _isCheckingOut = false;
   String _errorMessage = '';
+
   @override
   void initState() {
     super.initState();
@@ -64,15 +67,13 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
       });
     }
     try {
-      final data = await AttendanceService.getTodaysAttendance();
+      final data = await AbsenAPI.getAbsenToday();
       if (mounted) {
         setState(() {
-          _absenData = data.data;
+          _absenData = data?.data;
         });
       }
     } catch (e) {
-      // Tidak apa-apa jika ada error (misal: 404), artinya belum absen
-      // Kita set _absenData menjadi null
       if (mounted) {
         setState(() {
           _absenData = null;
@@ -87,52 +88,42 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
     }
   }
 
-  Future<void> _handleAttendanceAction({required String status}) async {
+  Future<void> _handleCheckIn() async {
     setState(() {
       _isCheckingIn = true;
     });
 
     try {
-      if (status == 'hadir') {
-        // Logika untuk Absen Hadir (membutuhkan lokasi)
-        final locationState = _locationCardKey.currentState as dynamic;
-        final lat = locationState.currentPosition.latitude;
-        final lng = locationState.currentPosition.longitude;
-        final address = locationState.currentAddress;
+      final locationState = _locationCardKey.currentState as dynamic;
+      final lat = locationState.currentPosition.latitude;
+      final lng = locationState.currentPosition.longitude;
+      final address = locationState.currentAddress;
 
-        if (address.contains("Tekan tombol") ||
-            address.contains("Gagal mendapatkan")) {
-          throw Exception(
-            "Lokasi belum didapatkan. Mohon tekan tombol 'Lokasi Terkini' terlebih dahulu.",
-          );
-        }
-
-        await AttendanceService.checkIn(
-          status: 'hadir',
-          latitude: lat,
-          longitude: lng,
-          address: address,
+      if (address.contains("Tekan tombol") ||
+          address.contains("Gagal mendapatkan")) {
+        throw Exception(
+          "Lokasi belum didapatkan. Mohon tekan tombol 'Lokasi Terkini' terlebih dahulu.",
         );
-      } else if (status == 'izin') {
-        // Logika untuk Izin (membutuhkan alasan dari dialog)
-        final String? alasan = await _showIzinDialog();
-        if (alasan == null || alasan.isEmpty) {
-          // Jika pengguna membatalkan atau tidak mengisi alasan
-          setState(() => _isCheckingIn = false);
-          return; // Hentikan proses
-        }
-
-        await AttendanceService.checkIn(status: 'izin', alasanIzin: alasan);
       }
 
-      // Setelah berhasil, refresh data dan tampilkan notifikasi
-      await _fetchTodaysAttendance();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Berhasil mengirimkan status: $status"),
-          backgroundColor: Colors.green,
-        ),
+      final result = await AbsenAPI.checkInUser(
+        checkInLat: lat,
+        checkInLng: lng,
+        checkInLocation: "Lokasi Check-in",
+        checkInAddress: address,
       );
+
+      if (result != null) {
+        await _fetchTodaysAttendance();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Berhasil check-in pada ${result.data?.checkInTime}"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception("Gagal melakukan check-in");
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -147,7 +138,98 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
     }
   }
 
-  // Method baru untuk menampilkan dialog Izin
+  Future<void> _handleCheckOut() async {
+    setState(() {
+      _isCheckingOut = true;
+    });
+
+    try {
+      final locationState = _locationCardKey.currentState as dynamic;
+      final lat = locationState.currentPosition.latitude;
+      final lng = locationState.currentPosition.longitude;
+      final address = locationState.currentAddress;
+
+      if (address.contains("Tekan tombol") ||
+          address.contains("Gagal mendapatkan")) {
+        throw Exception(
+          "Lokasi belum didapatkan. Mohon tekan tombol 'Lokasi Terkini' terlebih dahulu.",
+        );
+      }
+
+      final result = await AbsenAPI.checkOut(
+        checkOutLat: lat,
+        checkOutLng: lng,
+        checkOutLocation: "Lokasi Check-out",
+        checkOutAddress: address,
+      );
+
+      if (result != null) {
+        await _fetchTodaysAttendance();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Berhasil check-out pada ${result.data?.checkOutTime}",
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception("Gagal melakukan check-out");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isCheckingOut = false;
+      });
+    }
+  }
+
+  // Fungsi baru untuk menangani pengajuan izin
+  Future<void> _handleIzin() async {
+    final String? alasan = await _showIzinDialog();
+    if (alasan == null || alasan.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _isCheckingIn = true;
+    });
+
+    try {
+      final result = await AbsenAPI.submitIzin(alasanIzin: alasan);
+
+      if (result != null) {
+        await _fetchTodaysAttendance();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Berhasil mengajukan izin"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception("Gagal mengajukan izin");
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isCheckingIn = false;
+      });
+    }
+  }
+
+  // Fungsi untuk menampilkan dialog alasan izin
   Future<String?> _showIzinDialog() {
     final TextEditingController alasanController = TextEditingController();
     return showDialog<String>(
@@ -167,13 +249,12 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
             TextButton(
               child: const Text('BATAL'),
               onPressed: () {
-                Navigator.pop(context); // Tutup dialog tanpa mengirim data
+                Navigator.pop(context);
               },
             ),
             ElevatedButton(
               child: const Text('KIRIM'),
               onPressed: () {
-                // Tutup dialog dan kirim teks dari controller
                 Navigator.pop(context, alasanController.text);
               },
             ),
@@ -191,6 +272,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
       );
     }
 
+    // Cek jika _absenData benar-benar tidak ada
     if (_absenData == null) {
       return Container(
         height: 120,
@@ -198,7 +280,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10.0)],
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10.0)],
         ),
         child: const Center(
           child: Text(
@@ -210,32 +292,60 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
       );
     }
 
-    // Jika data ada, tampilkan
+    // Tampilan untuk status 'izin'
+    if (_absenData!.status == 'izin') {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10.0)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow(
+              icon: Icons.pending_actions,
+              label: "Status Absensi",
+              value: "IZIN",
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 8),
+            _buildInfoRow(
+              icon: Icons.info_outline,
+              label: "Alasan Izin",
+              // Menggunakan operator '??' untuk memberikan nilai default jika null
+              value: _absenData?.alasanIzin ?? 'Tidak ada keterangan izin.',
+              color: Colors.orange,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Tampilan default untuk absensi hadir
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10.0)],
+        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10.0)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Absensi Hari Ini (${DateFormat('EEEE, dd MMMM y', 'id_ID').format(_absenData!.attendanceDate)})",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const Divider(height: 20),
           _buildInfoRow(
             icon: Icons.login,
             label: "Check-in",
-            value: _absenData!.checkInTime,
+            // Menggunakan operator '??'
+            value: _absenData!.checkInTime ?? "Belum check-in",
             color: Colors.green,
           ),
           const SizedBox(height: 8),
           _buildInfoRow(
             icon: Icons.logout,
             label: "Check-out",
+            // Menggunakan operator '??'
             value: _absenData!.checkOutTime ?? "Belum check-out",
             color: Colors.red,
           ),
@@ -243,8 +353,28 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
           _buildInfoRow(
             icon: Icons.location_on,
             label: "Alamat Masuk",
-            value: _absenData!.checkInAddress,
+            // Menggunakan operator '??'
+            value: _absenData!.checkInAddress ?? "Tidak tersedia",
             color: Colors.blue,
+          ),
+          // Gunakan 'if' untuk mengecek null sebelum memanggil widget
+          if (_absenData!.checkOutAddress != null) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow(
+              icon: Icons.location_on,
+              label: "Alamat Keluar",
+              // Sudah aman karena sudah dicek di 'if' di atasnya
+              value: _absenData!.checkOutAddress!,
+              color: Colors.orange,
+            ),
+          ],
+          const SizedBox(height: 8),
+          _buildInfoRow(
+            icon: Icons.calendar_today,
+            label: "Status",
+            // Menggunakan operator '??'
+            value: _absenData!.status ?? "Tidak diketahui",
+            color: _absenData!.status == 'hadir' ? Colors.green : Colors.orange,
           ),
         ],
       ),
@@ -300,7 +430,6 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                           horizontal: 20,
                           vertical: 10,
                         ),
-                        // Row header Anda tetap sama
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -325,19 +454,87 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                       ),
                     ),
                   ),
-
-                  // Card Profil
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: -100,
+                    child: Card(
+                      elevation: 5,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(15.0),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: Colors.grey[200],
+                                  backgroundImage:
+                                      (userData?.data?.profilePhotoUrl ?? '')
+                                          .isNotEmpty
+                                      ? NetworkImage(
+                                          userData!.data!.profilePhotoUrl!,
+                                        )
+                                      : null,
+                                  child:
+                                      (userData?.data?.profilePhotoUrl ?? '')
+                                          .isEmpty
+                                      ? const Icon(
+                                          Icons.person,
+                                          size: 40,
+                                          color: Colors.teal,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 15),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      userData?.data?.name ??
+                                          "Nama tidak tersedia",
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          userData?.data?.batchKe ??
+                                              "Batch Tidak Tersedia",
+                                        ),
+                                        Text(
+                                          userData?.data?.trainingTitle ??
+                                              "Trainings Tidak di Temukan",
+                                          style: const TextStyle(fontSize: 9),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            StatistikDisplay(),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 110), // Spasi agar tidak tertutup Card
-              // Map Lokasi
+              const SizedBox(height: 110),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: LocationCard(key: _locationCardKey),
               ),
-
-              // Jam + Tombol
-              // Widget untuk menampilkan data absen hari ini
+              SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 25),
                 child: _buildAbsenHariIniCard(),
@@ -346,7 +543,6 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // TOMBOL HADIR
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
@@ -361,12 +557,21 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                     onPressed:
                         _isCheckingIn ||
                             (_absenData != null &&
-                                _absenData?.checkInTime != null)
-                        ? null // Disable jika sedang loading atau sudah absen
-                        : () => _handleAttendanceAction(status: 'hadir'),
-                    icon: const Icon(Icons.touch_app, color: Colors.white),
-                    label: const Text(
-                      "HADIR",
+                                _absenData!.checkInTime != null)
+                        ? null
+                        : _handleCheckIn,
+                    icon: _isCheckingIn
+                        ? Container(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Icon(Icons.touch_app, color: Colors.white),
+                    label: Text(
+                      _isCheckingIn ? "PROSES..." : "HADIR",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -374,8 +579,6 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-
-                  // TOMBOL IZIN BARU
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
@@ -390,11 +593,11 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                     onPressed:
                         _isCheckingIn ||
                             (_absenData != null &&
-                                _absenData?.checkInTime != null)
-                        ? null // Disable jika sedang loading atau sudah absen
-                        : () => _handleAttendanceAction(status: 'izin'),
-                    icon: const Icon(Icons.edit_document, color: Colors.white),
-                    label: const Text(
+                                _absenData!.checkInTime != null)
+                        ? null
+                        : _handleIzin,
+                    icon: Icon(Icons.edit_document, color: Colors.white),
+                    label: Text(
                       "IZIN",
                       style: TextStyle(
                         color: Colors.white,
@@ -402,9 +605,15 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
+                      backgroundColor:
+                          _absenData != null &&
+                              _absenData!.checkInTime != null &&
+                              _absenData!.checkOutTime == null
+                          ? Colors.green
+                          : Colors.grey,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -413,14 +622,29 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                         vertical: 12,
                       ),
                     ),
-                    onPressed: () {}, // Logika untuk pulang
-                    child: const Text(
-                      "PULANG",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    onPressed:
+                        (_absenData != null &&
+                            _absenData!.checkInTime != null &&
+                            _absenData!.checkOutTime == null &&
+                            !_isCheckingOut)
+                        ? _handleCheckOut
+                        : null,
+                    child: _isCheckingOut
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            "PULANG",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ],
               ),
@@ -429,74 +653,15 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                 "Lokasi anda saat ini: Kantor",
                 textAlign: TextAlign.center,
               ),
-
-              // Beri ruang kosong di bawah agar bisa di-scroll sampai sheet tidak menutupi tombol
+              const SizedBox(height: 20),
               Container(
                 color: Colors.grey[100],
                 padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Masuk',
-                    ),
-                    SizedBox(height: 16),
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Keluar',
-                    ),
-                    SizedBox(height: 16),
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Keluar',
-                    ),
-                    SizedBox(height: 16),
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Keluar',
-                    ),
-                    SizedBox(height: 16),
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Keluar',
-                    ),
-                    SizedBox(height: 16),
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Keluar',
-                    ),
-                    SizedBox(height: 16),
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Keluar',
-                    ),
-                    SizedBox(height: 90),
-                    AttendanceItem(
-                      date: 'Kamis, 14 Desember 2022',
-                      time: '15:56',
-                      status: 'Pending',
-                      type: 'Absen Keluar',
-                    ),
-                  ],
-                ),
+                child: Column(children: []),
               ),
+              SizedBox(height: 100),
             ],
           ),
-
           DraggableScrollableSheet(
             initialChildSize: 0.2,
             minChildSize: 0.2,
@@ -512,81 +677,12 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                 ),
                 child: ListView(
                   controller: scrollController,
-                  children: [
-                    // Panggil konten sheet Anda dari file lain
-                    SheetContent(),
-                  ],
+                  children: [SheetContent()],
                 ),
               );
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-// 🔹 Widget kecil untuk Statistik
-class _StatBox extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _StatBox({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(fontWeight: FontWeight.bold, color: color),
-        ),
-        Text(label),
-      ],
-    );
-  }
-}
-
-// 🔹 Widget Riwayat
-class _HistoryItem extends StatelessWidget {
-  final String date;
-  final String status;
-
-  const _HistoryItem({required this.date, required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: const Icon(Icons.article_outlined, color: Colors.purple),
-        title: Text(date),
-        subtitle: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.red[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text("Pending", style: TextStyle(color: Colors.red)),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(status, style: const TextStyle(color: Colors.green)),
-            ),
-          ],
-        ),
       ),
     );
   }
