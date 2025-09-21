@@ -10,130 +10,56 @@ import 'package:aplikasi_absen/utils/preference/get_preference_save_token.dart';
 import 'package:http/http.dart' as http;
 
 class AbsenAPI {
+  /// POST Check In
   static Future<CheckInModel?> checkInUser({
     required double checkInLat,
     required double checkInLng,
-    required String checkInLocation,
     required String checkInAddress,
   }) async {
     try {
       final token = await PreferenceHandler.getToken();
 
+      // ambil tanggal hari ini
       final now = DateTime.now();
       final attendanceDate =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
       final checkInTime =
           "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
 
+      final body = {
+        "attendance_date": attendanceDate,
+        "check_in": checkInTime,
+        "check_in_lat": checkInLat,
+        "check_in_lng": checkInLng,
+        "check_in_address": checkInAddress,
+        "status": "masuk",
+      };
+
+      print("📤 Sending body: $body");
+
       final response = await http.post(
         Uri.parse(ApiEndpoints.checkIn),
         headers: {
-          "Accept": "application/json",
+          "Content-Type": "application/json",
           "Authorization": "Bearer $token",
         },
-        body: {
-          "attendance_date": attendanceDate,
-          "check_in_time": checkInTime, // Perubahan di sini
-          "check_in_lat": checkInLat.toString(),
-          "check_in_lng": checkInLng.toString(),
-          "check_in_location": checkInLocation,
-          "check_in_address": checkInAddress,
-        },
+        body: json.encode(body),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body);
-        return CheckInModel.fromJson(jsonResponse);
+      print("📥 Response status: ${response.statusCode}");
+      print("📥 Response body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return CheckInModel.fromJson(data);
       } else {
-        print("CheckIn Failed: ${response.body}");
-        return null;
+        throw Exception("Failed to check-in: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error CheckIn: $e");
-      return null;
+      throw Exception("Error checkInUser: $e");
     }
   }
 
-  static Future<CheckOutModel?> checkOut({
-    required double checkOutLat,
-    required double checkOutLng,
-    required String checkOutLocation,
-    required String checkOutAddress,
-  }) async {
-    try {
-      final token = await PreferenceHandler.getToken();
-      final now = DateTime.now();
-      final attendanceDate =
-          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      final checkOutTime =
-          "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-
-      final response = await http.post(
-        Uri.parse(ApiEndpoints.checkOut),
-        headers: {
-          "Accept": "application/json",
-          "Authorization": "Bearer $token",
-        },
-        body: {
-          "attendance_date": attendanceDate,
-          "check_out_time": checkOutTime, // Perubahan di sini
-          "check_out_lat": checkOutLat.toString(),
-          "check_out_lng": checkOutLng.toString(),
-          "check_out_location": checkOutLocation,
-          "check_out_address": checkOutAddress,
-        },
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body);
-        return CheckOutModel.fromJson(jsonResponse);
-      } else {
-        print("CheckOut Failed: ${response.body}");
-        return null;
-      }
-    } catch (e) {
-      print("Error CheckOut: $e");
-      return null;
-    }
-  }
-
-  static Future<Izin?> submitIzin({required String alasanIzin}) async {
-    try {
-      final token = await PreferenceHandler.getToken();
-
-      final now = DateTime.now();
-      final attendanceDate =
-          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-
-      // Asumsi ada endpoint khusus untuk izin di ApiEndpoints
-      final response = await http.post(
-        Uri.parse(ApiEndpoints.izin), // Asumsikan Anda memiliki endpoint ini
-        headers: {
-          "Accept": "application/json",
-          "Authorization": "Bearer $token",
-          "Content-Type":
-              "application/json", // Penting untuk mengirim body JSON
-        },
-        body: jsonEncode({
-          "attendance_date": attendanceDate,
-          "alasan_izin": alasanIzin,
-        }),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body);
-        return Izin.fromJson(jsonResponse);
-      } else {
-        print("Submit Izin Failed: ${response.body}");
-        return null;
-      }
-    } catch (e) {
-      print("Error Submit Izin: $e");
-      return null;
-    }
-  }
-
-  // Absen Today
   static Future<AbsenTodayModel?> getAbsenToday() async {
     try {
       final token = await PreferenceHandler.getToken();
@@ -157,6 +83,123 @@ class AbsenAPI {
       }
     } catch (e) {
       print("Error Get Absen Today: $e");
+      return null;
+    }
+  }
+
+  static Future<CheckOutModel?> checkOutUser({
+    required String attendanceDate,
+    required String checkOut,
+    required double checkOutLat,
+    required double checkOutLng,
+    required String checkOutAddress,
+    required String status,
+  }) async {
+    try {
+      final token = await PreferenceHandler.getToken();
+
+      // ambil tanggal hari ini
+      final now = DateTime.now();
+      final attendanceDate =
+          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final checkOutTime =
+          "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+
+      final response = await http.post(
+        Uri.parse(ApiEndpoints.checkOut), // pastikan endpoint sesuai
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "attendance_date": attendanceDate,
+          "check_out": checkOut,
+          "check_out_lat": checkOutLat,
+          "check_out_lng": checkOutLng,
+          "check_out_address": checkOutAddress,
+          "status": status,
+        }),
+      );
+
+      print("📥 Response status: ${response.statusCode}");
+      print("📥 Response body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        return CheckOutModel.fromJson(jsonDecode(response.body));
+      } else {
+        print("❌ CheckOut Failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Error: $e");
+      return null;
+    }
+  }
+
+  /// Kirim permintaan izin
+  static Future<Izin?> izin({
+    required String attendanceDate,
+    required String alasanIzin,
+  }) async {
+    try {
+      final url = Uri.parse(ApiEndpoints.izin);
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: json.encode({
+          "date": attendanceDate,
+          "status": "izin",
+          "alasan_izin": alasanIzin,
+        }),
+      );
+
+      print("📤 Request izin: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return Izin.fromJson(json.decode(response.body));
+      } else {
+        print("❌ Gagal izin. Status: ${response.statusCode}");
+        print("❌ Body: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("❌ Error izin: $e");
+      return null;
+    }
+  }
+
+  static Future<Izin?> submitIzin({required String alasanIzin}) async {
+    try {
+      final token = await PreferenceHandler.getToken();
+
+      final now = DateTime.now();
+      final attendanceDate =
+          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+      // Asumsi ada endpoint khusus untuk izin di ApiEndpoints
+      final response = await http.post(
+        Uri.parse(ApiEndpoints.izin), // Asumsikan Anda memiliki endpoint ini
+        headers: {
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+          "Content-Type":
+              "application/json", // Penting untuk mengirim body JSON
+        },
+        body: jsonEncode({"date": attendanceDate, "alasan_izin": alasanIzin}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonResponse = jsonDecode(response.body);
+        return Izin.fromJson(jsonResponse);
+      } else {
+        print("Submit Izin Failed: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      print("Error Submit Izin: $e");
       return null;
     }
   }

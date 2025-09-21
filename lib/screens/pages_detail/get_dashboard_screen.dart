@@ -109,7 +109,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
       final result = await AbsenAPI.checkInUser(
         checkInLat: lat,
         checkInLng: lng,
-        checkInLocation: "Lokasi Check-in",
+
         checkInAddress: address,
       );
 
@@ -156,11 +156,17 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
         );
       }
 
-      final result = await AbsenAPI.checkOut(
+      final now = DateTime.now();
+      final attendanceDate = DateFormat("yyyy-MM-dd").format(now);
+      final checkOutTime = DateFormat("HH:mm").format(now);
+
+      final result = await AbsenAPI.checkOutUser(
+        attendanceDate: attendanceDate,
+        checkOut: checkOutTime,
         checkOutLat: lat,
         checkOutLng: lng,
-        checkOutLocation: "Lokasi Check-out",
         checkOutAddress: address,
+        status: "pulang",
       );
 
       if (result != null) {
@@ -168,7 +174,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "Berhasil check-out pada ${result.data?.checkOutTime}",
+              "✅ Berhasil check-out pada ${result.data?.checkOutTime ?? checkOutTime}",
             ),
             backgroundColor: Colors.green,
           ),
@@ -190,7 +196,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
     }
   }
 
-  // Fungsi baru untuk menangani pengajuan izin
+  // // Fungsi baru untuk menangani pengajuan izin
   Future<void> _handleIzin() async {
     final String? alasan = await _showIzinDialog();
     if (alasan == null || alasan.isEmpty) {
@@ -207,8 +213,10 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
       if (result != null) {
         await _fetchTodaysAttendance();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Berhasil mengajukan izin"),
+          SnackBar(
+            content: Text(
+              "✅ Berhasil mengajukan izin: ${result.data?.alasanIzin}",
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -218,7 +226,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Error: ${e.toString()}"),
+          content: Text("❌ Error: ${e.toString()}"),
           backgroundColor: Colors.red,
         ),
       );
@@ -561,7 +569,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                         ? null
                         : _handleCheckIn,
                     icon: _isCheckingIn
-                        ? Container(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
@@ -649,19 +657,17 @@ class _GetDashboardScreenState extends State<GetDashboardScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              const Text(
-                "Lokasi anda saat ini: Kantor",
-                textAlign: TextAlign.center,
-              ),
+
               const SizedBox(height: 20),
               Container(
                 color: Colors.grey[100],
                 padding: const EdgeInsets.all(16.0),
                 child: Column(children: []),
               ),
-              SizedBox(height: 100),
+              SizedBox(height: 300),
             ],
           ),
+
           DraggableScrollableSheet(
             initialChildSize: 0.2,
             minChildSize: 0.2,

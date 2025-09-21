@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class KaryawanContent extends StatelessWidget {
-  const KaryawanContent();
+  const KaryawanContent({super.key});
 
   @override
   Widget build(BuildContext context) {

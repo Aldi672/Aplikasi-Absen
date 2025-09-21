@@ -1,10 +1,8 @@
 // Jangan lupa tambahkan import ini di bagian atas
 
-import 'package:aplikasi_absen/screens/pages_detail/karyawan_content.dart';
-import 'package:aplikasi_absen/screens/pages_detail/leave_request_screen.dart';
 import 'package:aplikasi_absen/screens/pages_content/setting_content.dart';
+import 'package:aplikasi_absen/screens/pages_detail/jadwal_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 // --- MODEL DATA (Tidak berubah) ---
 class AbsensiHistory {
@@ -91,13 +89,6 @@ class _SheetContentState extends State<SheetContent> {
                 onTap: () => _updateContent('Lembur'),
                 isActive: _activeContent == 'Lembur',
               ),
-              _MenuIcon(
-                icon: Icons.receipt_long,
-                label: 'Penggajian',
-                color: Colors.teal.shade300,
-                onTap: () => _updateContent('Penggajian'),
-                isActive: _activeContent == 'Penggajian',
-              ),
             ],
           ),
         ),
@@ -120,8 +111,8 @@ class _SheetContentState extends State<SheetContent> {
     switch (_activeContent) {
       case 'Setting':
         return const SettingContent(); // Tampilkan konten setting
-      case 'Karyawan':
-        return const KaryawanContent(); // Tampilkan konten karyawan
+      // case 'Karyawan':
+      //   return const AbsenTodayView(); // Tampilkan konten karyawan
 
       default:
         return const RiwayatAbsensiContent(); // Tampilan default

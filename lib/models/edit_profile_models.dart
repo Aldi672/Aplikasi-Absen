@@ -1,21 +1,21 @@
 // To parse this JSON data, do
 //
-//     final getProfile = getProfileFromJson(jsonString);
+//     final EditProfile = EditProfileFromJson(jsonString);
 
 import 'dart:convert';
 
-GetProfile getProfileFromJson(String str) =>
-    GetProfile.fromJson(json.decode(str));
+EditProfile editProfileFromJson(String str) =>
+    EditProfile.fromJson(json.decode(str));
 
-String getProfileToJson(GetProfile data) => json.encode(data.toJson());
+String editProfileToJson(EditProfile data) => json.encode(data.toJson());
 
-class GetProfile {
+class EditProfile {
   String? message;
   Data? data;
 
-  GetProfile({this.message, this.data});
+  EditProfile({this.message, this.data});
 
-  factory GetProfile.fromJson(Map<String, dynamic> json) => GetProfile(
+  factory EditProfile.fromJson(Map<String, dynamic> json) => EditProfile(
     message: json["message"],
     data: json["data"] == null ? null : Data.fromJson(json["data"]),
   );
