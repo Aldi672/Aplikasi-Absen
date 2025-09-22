@@ -14,8 +14,6 @@ class LocationCard extends StatefulWidget {
 
 class LocationCardState extends State<LocationCard>
     with TickerProviderStateMixin {
-  // === PENGATURAN LOKASI TETAP (KANTOR) ===
-  // Ganti koordinat di bawah ini dengan lokasi yang Anda inginkan
   static const LatLng _officeLocation = LatLng(-6.210882, 106.812942);
   static const double _boundaryRadius = 50.0; // Radius 50 meter
 

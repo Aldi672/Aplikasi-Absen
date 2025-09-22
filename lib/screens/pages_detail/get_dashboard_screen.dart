@@ -43,6 +43,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
   bool _isFetchingAttendance = true;
   bool _isCheckingIn = false;
   bool _isCheckingOut = false;
+  String? _currentAddress;
   String _errorMessage = '';
 
   late AnimationController _mainAnimationController;
@@ -246,131 +247,147 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Stack(
-          children: [
-            // Main Content
-            CustomScrollView(
-              slivers: [
-                // Header dengan SliverAppBar
+      body: Container(
+        // Background gradien biru ke hitam
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF1565C0), // Biru tua
+              Color(0xFF0D47A1), // Biru lebih gelap
+              Color(0xFF1A237E), // Biru ungu gelap
+              Color(0xFF000000), // Hitam
+            ],
+            stops: [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Stack(
+            children: [
+              // Main Content
+              CustomScrollView(
+                slivers: [
+                  // Header dengan SliverAppBar
 
-                // Content
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const SizedBox(height: 20),
+                  // Content
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        const SizedBox(height: 20),
 
-                      // User Profile Card
-                      UserProfileCard(
-                        userData: userData,
-                        statistikDisplayKey: _statistikDisplayKey,
-                        isLoading: _isLoadingProfile,
-                        // checkInTime: _absenData?.checkInTime,
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Location Card
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
+                        // User Profile Card
+                        UserProfileCard(
+                          userData: userData,
+                          statistikDisplayKey: _statistikDisplayKey,
+                          isLoading: _isLoadingProfile,
+                          // checkInTime: _absenData?.checkInTime,
                         ),
-                        child: LocationCard(key: _locationCardKey),
-                      ),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // Attendance Status Card
-                      AttendanceStatusCard(
-                        absenData: _absenData,
-                        isFetching: _isFetchingAttendance,
-                      ),
+                        // Location Card
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: LocationCard(key: _locationCardKey),
+                        ),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // Action Buttons
-                      ActionButtonsRow(
-                        onCheckIn: _handleCheckIn,
-                        onCheckOut: _handleCheckOut,
-                        onIzin: _handleIzin,
-                        isCheckingIn: _isCheckingIn,
-                        isCheckingOut: _isCheckingOut,
-                        absenData: _absenData,
-                      ),
+                        // Attendance Status Card
+                        AttendanceStatusCard(
+                          absenData: _absenData,
+                          isFetching: _isFetchingAttendance,
+                        ),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // Attendance Summary
-                      AttendanceSummary(absenData: _absenData),
+                        // Action Buttons
+                        ActionButtonsRow(
+                          onCheckIn: _handleCheckIn,
+                          onCheckOut: _handleCheckOut,
+                          onIzin: _handleIzin,
+                          isCheckingIn: _isCheckingIn,
+                          isCheckingOut: _isCheckingOut,
+                          absenData: _absenData,
+                          currentAddress: _currentAddress ?? "-",
+                        ),
 
-                      const SizedBox(height: 200),
-                    ]),
-                  ),
-                ),
-              ],
-            ),
+                        const SizedBox(height: 24),
 
-            // Draggable Bottom Sheet
-            DraggableScrollableSheet(
-              initialChildSize: 0.12,
-              minChildSize: 0.12,
-              maxChildSize: 0.9,
-              builder: (context, scrollController) {
-                return Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
+                        // Attendance Summary
+                        AttendanceSummary(absenData: _absenData),
+
+                        const SizedBox(height: 200),
+                      ]),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 10,
-                        offset: Offset(0, -2),
-                      ),
-                    ],
                   ),
-                  child: Column(
-                    children: [
-                      // Drag Handle
-                      Container(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
+                ],
+              ),
 
-                      // Content
-                      Expanded(
-                        child: ListView(
-                          controller: scrollController,
-                          children: [
-                            SheetContent(
-                              onHistoryDeleted: _reloadData,
-                              riwayatAbsensiKey: _riwayatAbsensiKey,
-                            ),
-                          ],
-                        ),
+              // Draggable Bottom Sheet
+              DraggableScrollableSheet(
+                initialChildSize: 0.12,
+                minChildSize: 0.12,
+                maxChildSize: 0.9,
+                builder: (context, scrollController) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Drag Handle
+                        Container(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+
+                        // Content
+                        Expanded(
+                          child: ListView(
+                            controller: scrollController,
+                            children: [
+                              SheetContent(
+                                onHistoryDeleted: _reloadData,
+                                riwayatAbsensiKey: _riwayatAbsensiKey,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
