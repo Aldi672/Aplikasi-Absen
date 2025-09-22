@@ -1,7 +1,7 @@
 // widgets/attendance_status_card.dart
-import 'package:flutter/material.dart';
 import 'package:aplikasi_absen/models/get_absen_today_models.dart'
     as AbsenToday;
+import 'package:flutter/material.dart';
 
 class AttendanceStatusCard extends StatelessWidget {
   final AbsenToday.Data? absenData;
@@ -307,6 +307,42 @@ class AttendanceStatusCard extends StatelessWidget {
             ],
           ),
 
+          const SizedBox(height: 16),
+
+          // =================================================================
+          // TAMBAHAN: Banner "menyala" untuk menandakan lokasi absensi valid
+          // =================================================================
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.teal.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.teal.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  color: Colors.teal.shade700,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  "Absensi di Lokasi PPKD",
+                  style: TextStyle(
+                    color: Colors.teal.shade800,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // =================================================================
+          // Akhir dari banner tambahan
+          // =================================================================
           const SizedBox(height: 20),
 
           // Attendance Details
@@ -331,8 +367,8 @@ class AttendanceStatusCard extends StatelessWidget {
                   icon: Icons.location_on,
                   label: 'Lokasi',
                   value: absenData!.checkInAddress!,
-                  color: Colors.blue,
-                  isLocation: true,
+                  color: Colors.grey,
+                  isValueSmall: true, // Membuat teks lokasi lebih kecil
                 ),
               ],
             ],
@@ -347,55 +383,28 @@ class AttendanceStatusCard extends StatelessWidget {
     required String label,
     required String value,
     required Color color,
-    bool isLocation = false,
+    bool isValueSmall = false,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2D3748),
-                  ),
-                  maxLines: isLocation ? 2 : 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 12),
+        Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+        const Spacer(),
+        Expanded(
+          flex: 2,
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: isValueSmall ? 12 : 15,
+              fontWeight: FontWeight.w600,
+              color: isValueSmall ? Colors.grey[600] : const Color(0xFF2D3748),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -1,12 +1,16 @@
-// pages_content/location_content.dart - With Address Display and Always Visible Location
-import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geocoding/geocoding.dart'; // Tambahkan dependency ini di pubspec.yaml
+// pages_content/location_content.dart - With Address Display and Manual Refresh Only
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 class LocationCard extends StatefulWidget {
-  const LocationCard({super.key});
+  final Function(Position? position, String fullAddress) onLocationUpdate;
+  const LocationCard({super.key, required this.onLocationUpdate});
 
   @override
   State<LocationCard> createState() => LocationCardState();
@@ -14,8 +18,8 @@ class LocationCard extends StatefulWidget {
 
 class LocationCardState extends State<LocationCard>
     with TickerProviderStateMixin {
-  static const LatLng _officeLocation = LatLng(-6.210882, 106.812942);
-  static const double _boundaryRadius = 50.0; // Radius 50 meter
+  static const LatLng _officeLocation = LatLng(-6.210932, 106.813075);
+  static const double _boundaryRadius = 50; // Radius 50 meter
 
   // --- State Variables ---
   Position? currentPosition;
@@ -24,7 +28,6 @@ class LocationCardState extends State<LocationCard>
   bool isLoadingLocation = false;
   bool isLoadingAddress = false;
   bool isMapExpanded = false;
-  StreamSubscription<Position>? _positionStream;
 
   // --- Map Controllers & State ---
   GoogleMapController? _mapController;
@@ -40,7 +43,6 @@ class LocationCardState extends State<LocationCard>
 
   @override
   void dispose() {
-    _positionStream?.cancel();
     _mapController?.dispose();
     super.dispose();
   }
@@ -75,7 +77,7 @@ class LocationCardState extends State<LocationCard>
 
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
+        timeLimit: const Duration(seconds: 30),
       );
 
       if (mounted) {
@@ -86,7 +88,7 @@ class LocationCardState extends State<LocationCard>
         _updateMapElements(position);
         _animateToCurrentLocation();
         _getAddressFromPosition(position); // Dapatkan alamat lengkap
-        _startLocationStream();
+        widget.onLocationUpdate(currentPosition, fullAddress);
       }
     } catch (e) {
       if (mounted) {
@@ -94,6 +96,7 @@ class LocationCardState extends State<LocationCard>
           currentAddress = "Gagal mendapatkan lokasi: ${e.toString()}";
           fullAddress = "";
         });
+        widget.onLocationUpdate(null, "");
       }
     } finally {
       if (mounted) setState(() => isLoadingLocation = false);
@@ -127,53 +130,19 @@ class LocationCardState extends State<LocationCard>
   }
 
   String _buildAddressString(Placemark place) {
-    List<String> addressParts = [];
-
-    if (place.name != null && place.name!.isNotEmpty) {
-      addressParts.add(place.name!);
-    }
-    if (place.street != null && place.street!.isNotEmpty) {
-      addressParts.add(place.street!);
-    }
-    if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-      addressParts.add(place.subLocality!);
-    }
-    if (place.locality != null && place.locality!.isNotEmpty) {
-      addressParts.add(place.locality!);
-    }
-    if (place.subAdministrativeArea != null &&
-        place.subAdministrativeArea!.isNotEmpty) {
-      addressParts.add(place.subAdministrativeArea!);
-    }
-    if (place.administrativeArea != null &&
-        place.administrativeArea!.isNotEmpty) {
-      addressParts.add(place.administrativeArea!);
-    }
-
-    return addressParts.join(', ');
-  }
-
-  void _startLocationStream() {
-    _positionStream?.cancel();
-    const LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10, // Update setiap 10 meter
-    );
-    _positionStream =
-        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
-          (Position position) {
-            if (mounted) {
-              setState(() {
-                currentPosition = position;
-                currentAddress = _formatCoordinatesFromPosition(position);
-              });
-              _updateMapElements(position);
-              _getAddressFromPosition(
-                position,
-              ); // Update alamat saat lokasi berubah
-            }
-          },
-        );
+    return [
+      if (place.name != null && place.name!.isNotEmpty) place.name,
+      if (place.street != null && place.street!.isNotEmpty) place.street,
+      if (place.subLocality != null && place.subLocality!.isNotEmpty)
+        place.subLocality,
+      if (place.locality != null && place.locality!.isNotEmpty) place.locality,
+      if (place.subAdministrativeArea != null &&
+          place.subAdministrativeArea!.isNotEmpty)
+        place.subAdministrativeArea,
+      if (place.administrativeArea != null &&
+          place.administrativeArea!.isNotEmpty)
+        place.administrativeArea,
+    ].where((s) => s != null).join(', ');
   }
 
   void _updateMapElements(Position userPosition) {
@@ -218,7 +187,7 @@ class LocationCardState extends State<LocationCard>
         position: _officeLocation,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         infoWindow: const InfoWindow(
-          title: 'Lokasi Kantor',
+          title: 'Lokasi PPKD',
           snippet: 'Titik referensi absensi',
         ),
       ),
@@ -351,8 +320,6 @@ class LocationCardState extends State<LocationCard>
             ],
           ),
           const SizedBox(height: 12),
-
-          // Container untuk Alamat Lengkap
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -399,8 +366,6 @@ class LocationCardState extends State<LocationCard>
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // Alamat Lengkap
                 if (isLoadingAddress)
                   const Row(
                     children: [
@@ -439,10 +404,7 @@ class LocationCardState extends State<LocationCard>
                       fontStyle: FontStyle.italic,
                     ),
                   ),
-
                 const SizedBox(height: 12),
-
-                // Koordinat dan Akurasi
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -530,7 +492,7 @@ class LocationCardState extends State<LocationCard>
                   mapType: _currentMapType,
                   markers: _markers,
                   circles: _circles,
-                  myLocationEnabled: false,
+                  myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
                   mapToolbarEnabled: false,
@@ -556,7 +518,7 @@ class LocationCardState extends State<LocationCard>
               ),
               _buildMapControlButton(
                 icon: Icons.business,
-                label: 'Lokasi Kantor',
+                label: 'Lokasi PPKD',
                 onPressed: () {
                   _mapController?.animateCamera(
                     CameraUpdate.newLatLngZoom(_officeLocation, 18.0),
@@ -564,63 +526,10 @@ class LocationCardState extends State<LocationCard>
                 },
                 color: Colors.red,
               ),
-              _buildMapControlButton(
-                icon: Icons.layers,
-                label: 'Jenis Peta',
-                onPressed: _showMapTypeDialog,
-                color: Colors.green,
-              ),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  void _showMapTypeDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pilih Jenis Peta'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Normal'),
-              leading: Radio<MapType>(
-                value: MapType.normal,
-                groupValue: _currentMapType,
-                onChanged: (value) {
-                  _changeMapType(value!);
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-            ListTile(
-              title: const Text('Satelit'),
-              leading: Radio<MapType>(
-                value: MapType.satellite,
-                groupValue: _currentMapType,
-                onChanged: (value) {
-                  _changeMapType(value!);
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-            ListTile(
-              title: const Text('Hybrid'),
-              leading: Radio<MapType>(
-                value: MapType.hybrid,
-                groupValue: _currentMapType,
-                onChanged: (value) {
-                  _changeMapType(value!);
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
