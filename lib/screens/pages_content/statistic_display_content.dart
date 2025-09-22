@@ -8,38 +8,40 @@ class StatistikDisplay extends StatefulWidget {
   const StatistikDisplay({Key? key}) : super(key: key);
 
   @override
-  _StatistikDisplayState createState() => _StatistikDisplayState();
+  StatistikDisplayState createState() => StatistikDisplayState();
 }
 
-class _StatistikDisplayState extends State<StatistikDisplay> {
+class StatistikDisplayState extends State<StatistikDisplay> {
   Data? _statistikData;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
+    fetchData();
   }
 
-  Future<void> _fetchData() async {
+  Future<void> fetchData() async {
+    // Ensure it's loading when called externally
     if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final response = await StatistikService.getStatistik();
-      if (mounted && response != null) {
-        setState(() {
-          _statistikData = response.data;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (!mounted) return; // pastikan widget masih aktif
 
-        print("Error fetching statistik: $e");
-      }
+      setState(() {
+        _statistikData = response?.data;
+      });
+    } catch (e) {
+      // Handle error if needed
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 

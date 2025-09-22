@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class RiwayatAbsensiContent extends StatefulWidget {
-  const RiwayatAbsensiContent({super.key});
+  final VoidCallback? onDeleteSuccess;
+  const RiwayatAbsensiContent({super.key, this.onDeleteSuccess});
 
   @override
-  State<RiwayatAbsensiContent> createState() => _RiwayatAbsensiContentState();
+  RiwayatAbsensiContentState createState() => RiwayatAbsensiContentState();
 }
 
-class _RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
+class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
   List<Datum> _historyData = [];
   List<Datum> _filteredHistory = [];
   bool _isLoading = true;
@@ -24,7 +25,7 @@ class _RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
   @override
   void initState() {
     super.initState();
-    _fetchHistory();
+    fetchHistory();
   }
 
   Future<void> _handleDelete(String id, DateTime date) async {
@@ -43,7 +44,7 @@ class _RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
           _historyData.removeWhere((item) => item.id.toString() == id);
           _filterByDate(date); // Perbarui tampilan setelah menghapus
         });
-
+        widget.onDeleteSuccess?.call();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("✅ Riwayat absensi berhasil dihapus"),
@@ -69,12 +70,18 @@ class _RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
     }
   }
 
-  Future<void> _fetchHistory() async {
+  Future<void> fetchHistory() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+
     final result = await HistoryAPI.getHistory();
     if (result != null && result.data != null) {
       setState(() {
         _historyData = result.data!;
         _filteredHistory = _historyData; // default tampil semua
+        _filterByDate(_selectedDay ?? DateTime.now());
         _isLoading = false;
       });
     } else {

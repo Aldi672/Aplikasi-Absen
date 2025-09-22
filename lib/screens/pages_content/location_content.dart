@@ -1,124 +1,506 @@
+// pages_content/location_content.dart - With Address Display and Always Visible Location
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart'; // Tambahkan dependency ini di pubspec.yaml
+import 'dart:async';
 
 class LocationCard extends StatefulWidget {
   const LocationCard({super.key});
 
   @override
-  State<LocationCard> createState() => _LocationCardState();
+  State<LocationCard> createState() => LocationCardState();
 }
 
-class _LocationCardState extends State<LocationCard> {
+class LocationCardState extends State<LocationCard>
+    with TickerProviderStateMixin {
+  // === PENGATURAN LOKASI TETAP (KANTOR) ===
+  // Ganti koordinat di bawah ini dengan lokasi yang Anda inginkan
+  static const LatLng _officeLocation = LatLng(-6.210882, 106.812942);
+  static const double _boundaryRadius = 50.0; // Radius 50 meter
+
+  // --- State Variables ---
+  Position? currentPosition;
+  String currentAddress = "Mencari lokasi Anda...";
+  String fullAddress = ""; // Untuk alamat lengkap
+  bool isLoadingLocation = false;
+  bool isLoadingAddress = false;
+  bool isMapExpanded = false;
+  StreamSubscription<Position>? _positionStream;
+
+  // --- Map Controllers & State ---
   GoogleMapController? _mapController;
-  // Posisi default diatur ke Monas, Jakarta
-  LatLng _currentPosition = const LatLng(-6.175392, 106.827153);
-  String _currentAddress =
-      "Tekan tombol untuk mendapatkan lokasi & alamat Anda.";
-  Marker? _marker;
-  bool _isLoading = false;
-  LatLng get currentPosition => _currentPosition;
-  String get currentAddress => _currentAddress;
+  final Set<Marker> _markers = {};
+  final Set<Circle> _circles = {};
+  MapType _currentMapType = MapType.normal;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _positionStream?.cancel();
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  // --- LOGIC METHODS ---
+
+  Future<void> _getCurrentLocation() async {
+    if (!mounted) return;
+    setState(() => isLoadingLocation = true);
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled)
+        throw Exception("Layanan lokasi tidak aktif. Silakan aktifkan GPS.");
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission != LocationPermission.whileInUse &&
+            permission != LocationPermission.always) {
+          throw Exception(
+            "Izin lokasi ditolak. Aplikasi memerlukan izin untuk berfungsi.",
+          );
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+          "Izin lokasi ditolak permanen. Aktifkan di pengaturan aplikasi.",
+        );
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 15),
+      );
+
+      if (mounted) {
+        setState(() {
+          currentPosition = position;
+          currentAddress = _formatCoordinatesFromPosition(position);
+        });
+        _updateMapElements(position);
+        _animateToCurrentLocation();
+        _getAddressFromPosition(position); // Dapatkan alamat lengkap
+        _startLocationStream();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          currentAddress = "Gagal mendapatkan lokasi: ${e.toString()}";
+          fullAddress = "";
+        });
+      }
+    } finally {
+      if (mounted) setState(() => isLoadingLocation = false);
+    }
+  }
+
+  Future<void> _getAddressFromPosition(Position position) async {
+    if (!mounted) return;
+    setState(() => isLoadingAddress = true);
+
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty && mounted) {
+        Placemark place = placemarks.first;
+        String address = _buildAddressString(place);
+        setState(() => fullAddress = address);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          fullAddress = "Gagal mendapatkan alamat lengkap";
+        });
+      }
+    } finally {
+      if (mounted) setState(() => isLoadingAddress = false);
+    }
+  }
+
+  String _buildAddressString(Placemark place) {
+    List<String> addressParts = [];
+
+    if (place.name != null && place.name!.isNotEmpty) {
+      addressParts.add(place.name!);
+    }
+    if (place.street != null && place.street!.isNotEmpty) {
+      addressParts.add(place.street!);
+    }
+    if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+      addressParts.add(place.subLocality!);
+    }
+    if (place.locality != null && place.locality!.isNotEmpty) {
+      addressParts.add(place.locality!);
+    }
+    if (place.subAdministrativeArea != null &&
+        place.subAdministrativeArea!.isNotEmpty) {
+      addressParts.add(place.subAdministrativeArea!);
+    }
+    if (place.administrativeArea != null &&
+        place.administrativeArea!.isNotEmpty) {
+      addressParts.add(place.administrativeArea!);
+    }
+
+    return addressParts.join(', ');
+  }
+
+  void _startLocationStream() {
+    _positionStream?.cancel();
+    const LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10, // Update setiap 10 meter
+    );
+    _positionStream =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+          (Position position) {
+            if (mounted) {
+              setState(() {
+                currentPosition = position;
+                currentAddress = _formatCoordinatesFromPosition(position);
+              });
+              _updateMapElements(position);
+              _getAddressFromPosition(
+                position,
+              ); // Update alamat saat lokasi berubah
+            }
+          },
+        );
+  }
+
+  void _updateMapElements(Position userPosition) {
+    if (!mounted) return;
+    final LatLng userLatLng = LatLng(
+      userPosition.latitude,
+      userPosition.longitude,
+    );
+
+    _markers.clear();
+    _circles.clear();
+
+    // 1. Marker untuk Lokasi Pengguna
+    _markers.add(
+      Marker(
+        markerId: const MarkerId('user_location'),
+        position: userLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        infoWindow: InfoWindow(
+          title: 'Lokasi Anda',
+          snippet: fullAddress.isNotEmpty ? fullAddress : 'Memuat alamat...',
+        ),
+      ),
+    );
+
+    // 2. Lingkaran Akurasi di Lokasi Pengguna
+    _circles.add(
+      Circle(
+        circleId: const CircleId('accuracy_circle'),
+        center: userLatLng,
+        radius: userPosition.accuracy,
+        fillColor: Colors.blue.withOpacity(0.1),
+        strokeColor: Colors.blue.withOpacity(0.3),
+        strokeWidth: 1,
+      ),
+    );
+
+    // 3. Marker untuk Lokasi Kantor
+    _markers.add(
+      Marker(
+        markerId: const MarkerId('office_location'),
+        position: _officeLocation,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: const InfoWindow(
+          title: 'Lokasi Kantor',
+          snippet: 'Titik referensi absensi',
+        ),
+      ),
+    );
+
+    // 4. Lingkaran Batas di Lokasi Kantor
+    _circles.add(
+      Circle(
+        circleId: const CircleId('boundary_circle'),
+        center: _officeLocation,
+        radius: _boundaryRadius,
+        fillColor: Colors.transparent,
+        strokeColor: Colors.red.withOpacity(0.7),
+        strokeWidth: 2,
+      ),
+    );
+
+    setState(() {});
+  }
+
+  void _animateToCurrentLocation() {
+    if (_mapController != null && currentPosition != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(
+              currentPosition!.latitude,
+              currentPosition!.longitude,
+            ),
+            zoom: 18.0,
+            tilt: 30,
+          ),
+        ),
+      );
+    }
+  }
+
+  void _changeMapType(MapType mapType) {
+    setState(() => _currentMapType = mapType);
+  }
+
+  String _formatCoordinatesFromPosition(Position position) {
+    return "Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)}";
+  }
+
+  bool _isWithinBoundary() {
+    if (currentPosition == null) return false;
+    double distance = Geolocator.distanceBetween(
+      currentPosition!.latitude,
+      currentPosition!.longitude,
+      _officeLocation.latitude,
+      _officeLocation.longitude,
+    );
+    return distance <= _boundaryRadius;
+  }
+
+  // --- UI BUILD METHODS ---
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shadowColor: Colors.black26,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Bagian Peta Google Maps
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: SizedBox(
-              height: 250,
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: _currentPosition,
-                  zoom: 15,
-                ),
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                mapType: MapType.normal,
-                markers: _marker != null ? {_marker!} : {},
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                },
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildLocationInfo(),
+          if (isMapExpanded) _buildInteractiveMap(),
+        ],
+      ),
+    );
+  }
 
-          // Bagian Informasi Lokasi
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+  Widget _buildLocationInfo() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.location_on_rounded,
+                color: _isWithinBoundary() ? Colors.green : Colors.red,
+                size: 28,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Lokasi Anda',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Radius kerja: ${_boundaryRadius.toInt()}m dari kantor',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  isMapExpanded ? Icons.keyboard_arrow_up : Icons.map_outlined,
+                  color: Colors.blue,
+                ),
+                onPressed: () => setState(() => isMapExpanded = !isMapExpanded),
+              ),
+              IconButton(
+                icon: isLoadingLocation
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh, color: Colors.blue),
+                onPressed: isLoadingLocation ? null : _getCurrentLocation,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Container untuk Alamat Lengkap
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.withOpacity(0.2)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Info Koordinat
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.gps_fixed, color: Colors.blue, size: 20),
-                    const SizedBox(width: 8),
-                    Flexible(
+                    const Text(
+                      'Alamat Lengkap:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: (_isWithinBoundary() ? Colors.green : Colors.red)
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: Text(
-                        "Koordinat: ${_currentPosition.latitude.toStringAsFixed(5)}, ${_currentPosition.longitude.toStringAsFixed(5)}",
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        _isWithinBoundary() ? 'DALAM AREA' : 'LUAR AREA',
+                        style: TextStyle(
+                          color: _isWithinBoundary()
+                              ? Colors.green.shade800
+                              : Colors.red.shade800,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+
+                // Alamat Lengkap
+                if (isLoadingAddress)
+                  const Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Memuat alamat...',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  )
+                else if (fullAddress.isNotEmpty)
+                  Text(
+                    fullAddress,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                    ),
+                  )
+                else
+                  const Text(
+                    'Alamat tidak tersedia',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+
                 const SizedBox(height: 12),
 
-                // Info Alamat
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.location_pin, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _currentAddress,
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(color: Colors.black87),
+                // Koordinat dan Akurasi
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Koordinat:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Tombol Aksi
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading
-                        ? null
-                        : _getCurrentLocation, // Nonaktifkan saat loading
-                    icon: _isLoading
-                        ? Container(
-                            width: 24,
-                            height: 24,
-                            padding: const EdgeInsets.all(2.0),
-                            child: const CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
+                      const SizedBox(height: 4),
+                      Text(
+                        currentAddress,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black87,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                      if (currentPosition != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Akurasi: ${currentPosition!.accuracy.toStringAsFixed(1)}m',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _getAccuracyColor(
+                                  currentPosition!.accuracy,
+                                ),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          )
-                        : const Icon(Icons.my_location),
-                    label: Text(
-                      _isLoading ? "Mencari Lokasi..." : "Lokasi Terkini",
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
+                            Text(
+                              'Jarak: ${_getDistanceToOffice()}m',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _isWithinBoundary()
+                                    ? Colors.green.shade700
+                                    : Colors.red.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
@@ -129,82 +511,217 @@ class _LocationCardState extends State<LocationCard> {
     );
   }
 
-  Future<void> _getCurrentLocation() async {
-    // 1. Mulai state loading dan update UI
-    setState(() {
-      _isLoading = true;
-      _currentAddress = "Mencari alamat...";
-    });
-
-    try {
-      // 2. Cek izin dan layanan lokasi
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Layanan lokasi tidak aktif.');
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Izin lokasi ditolak.');
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Izin lokasi ditolak permanen, buka pengaturan.');
-      }
-
-      // 3. Ambil posisi saat ini
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      _currentPosition = LatLng(position.latitude, position.longitude);
-
-      // 4. Konversi koordinat menjadi alamat (Reverse Geocoding)
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        _currentPosition.latitude,
-        _currentPosition.longitude,
-      );
-
-      String address = "Alamat tidak ditemukan.";
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-        // Gabungkan alamat menjadi format yang lebih rapi
-        address = [
-          place.street,
-          place.subLocality,
-          place.locality,
-          place.postalCode,
-          place.country,
-        ].where((element) => element != null && element.isNotEmpty).join(', ');
-      }
-
-      // 5. Update UI dengan data yang ditemukan
-      setState(() {
-        _currentAddress = address;
-        _marker = Marker(
-          markerId: const MarkerId("lokasi_saat_ini"),
-          position: _currentPosition,
-          infoWindow: InfoWindow(title: 'Lokasi Anda', snippet: address),
-        );
-      });
-
-      // 6. Arahkan kamera peta ke lokasi baru
-      _mapController?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: _currentPosition, zoom: 16),
+  Widget _buildInteractiveMap() {
+    return Column(
+      children: [
+        const Divider(height: 1, indent: 20, endIndent: 20),
+        SizedBox(
+          height: 250,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(20),
+            ),
+            child: Stack(
+              children: [
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: _officeLocation,
+                    zoom: 18.0,
+                  ),
+                  onMapCreated: (controller) => _mapController = controller,
+                  mapType: _currentMapType,
+                  markers: _markers,
+                  circles: _circles,
+                  myLocationEnabled: false,
+                  myLocationButtonEnabled: false,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                ),
+                PulsingBoundaryCircle(
+                  officeLocation: _officeLocation,
+                  boundaryRadius: _boundaryRadius,
+                ),
+              ],
+            ),
+          ),
         ),
-      );
-    } catch (e) {
-      // Tangani jika ada error
-      setState(() {
-        _currentAddress = "Gagal mendapatkan lokasi: ${e.toString()}";
-      });
-    } finally {
-      // 7. Selesaikan state loading
-      setState(() {
-        _isLoading = false;
-      });
-    }
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildMapControlButton(
+                icon: Icons.my_location,
+                label: 'Lokasi Saya',
+                onPressed: _animateToCurrentLocation,
+                color: Colors.blue,
+              ),
+              _buildMapControlButton(
+                icon: Icons.business,
+                label: 'Lokasi Kantor',
+                onPressed: () {
+                  _mapController?.animateCamera(
+                    CameraUpdate.newLatLngZoom(_officeLocation, 18.0),
+                  );
+                },
+                color: Colors.red,
+              ),
+              _buildMapControlButton(
+                icon: Icons.layers,
+                label: 'Jenis Peta',
+                onPressed: _showMapTypeDialog,
+                color: Colors.green,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showMapTypeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pilih Jenis Peta'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Normal'),
+              leading: Radio<MapType>(
+                value: MapType.normal,
+                groupValue: _currentMapType,
+                onChanged: (value) {
+                  _changeMapType(value!);
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            ListTile(
+              title: const Text('Satelit'),
+              leading: Radio<MapType>(
+                value: MapType.satellite,
+                groupValue: _currentMapType,
+                onChanged: (value) {
+                  _changeMapType(value!);
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            ListTile(
+              title: const Text('Hybrid'),
+              leading: Radio<MapType>(
+                value: MapType.hybrid,
+                groupValue: _currentMapType,
+                onChanged: (value) {
+                  _changeMapType(value!);
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapControlButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    required Color color,
+  }) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: color, size: 18),
+      label: Text(
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Color _getAccuracyColor(double accuracy) {
+    if (accuracy <= 10) return Colors.green.shade700;
+    if (accuracy <= 20) return Colors.orange.shade700;
+    return Colors.red.shade700;
+  }
+
+  String _getDistanceToOffice() {
+    if (currentPosition == null) return "0";
+    double distance = Geolocator.distanceBetween(
+      currentPosition!.latitude,
+      currentPosition!.longitude,
+      _officeLocation.latitude,
+      _officeLocation.longitude,
+    );
+    return distance.toStringAsFixed(1);
+  }
+}
+
+// === WIDGET ANIMASI UNTUK BOUNDARY CIRCLE ===
+class PulsingBoundaryCircle extends StatefulWidget {
+  final LatLng officeLocation;
+  final double boundaryRadius;
+
+  const PulsingBoundaryCircle({
+    super.key,
+    required this.officeLocation,
+    required this.boundaryRadius,
+  });
+
+  @override
+  State<PulsingBoundaryCircle> createState() => _PulsingBoundaryCircleState();
+}
+
+class _PulsingBoundaryCircleState extends State<PulsingBoundaryCircle>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _pulseAnimation = Tween<double>(begin: 0.05, end: 0.25).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            final screenRadius = widget.boundaryRadius * 5;
+            return Container(
+              width: screenRadius * 2,
+              height: screenRadius * 2,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red.withOpacity(_pulseAnimation.value),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 }

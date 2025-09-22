@@ -48,6 +48,7 @@ dependencies:
   geocoding: ^4.0.0
   geolocator: ^14.0.2
   google_maps_flutter: ^2.13.1
+  timeline_tile: ^2.0.0
 
 dev_dependencies:
   flutter_test:

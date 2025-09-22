@@ -15,7 +15,14 @@ class AbsensiHistory {
 // Diubah menjadi StatefulWidget agar bisa mengelola konten dinamis
 class SheetContent extends StatefulWidget {
   final VoidCallback? onProfileUpdated;
-  const SheetContent({super.key, this.onProfileUpdated});
+  final VoidCallback? onHistoryDeleted;
+  final Key? riwayatAbsensiKey;
+  const SheetContent({
+    super.key,
+    this.onProfileUpdated,
+    this.onHistoryDeleted,
+    this.riwayatAbsensiKey,
+  });
 
   @override
   State<SheetContent> createState() => _SheetContentState();
@@ -75,20 +82,6 @@ class _SheetContentState extends State<SheetContent> {
                 onTap: () => _updateContent('Setting'),
                 isActive: _activeContent == 'Setting',
               ),
-              _MenuIcon(
-                icon: Icons.people,
-                label: 'Karyawan',
-                color: Colors.lightBlue.shade300,
-                onTap: () => _updateContent('Karyawan'),
-                isActive: _activeContent == 'Karyawan',
-              ),
-              _MenuIcon(
-                icon: Icons.timer,
-                label: 'Lembur',
-                color: Colors.cyan.shade600,
-                onTap: () => _updateContent('Lembur'),
-                isActive: _activeContent == 'Lembur',
-              ),
             ],
           ),
         ),
@@ -115,7 +108,10 @@ class _SheetContentState extends State<SheetContent> {
       //   return const AbsenTodayView(); // Tampilkan konten karyawan
 
       default:
-        return const RiwayatAbsensiContent(); // Tampilan default
+        return RiwayatAbsensiContent(
+          key: widget.riwayatAbsensiKey, // Use the key here
+          onDeleteSuccess: widget.onHistoryDeleted,
+        );
     }
   }
 }
