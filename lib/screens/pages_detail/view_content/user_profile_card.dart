@@ -150,19 +150,6 @@ class UserProfileCard extends StatelessWidget {
                 ),
 
                 // Menu Button
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.more_vert,
-                    color: Colors.grey[600],
-                    size: 18,
-                  ),
-                ),
               ],
             ),
 

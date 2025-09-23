@@ -15,11 +15,11 @@ class ActionButtonsRow extends StatefulWidget {
   final String currentAddress;
 
   // Pengaturan lokasi kantor dan jam kerja
-  static const double _officeLatitude = -6.210882;
-  static const double _officeLongitude = 106.812942;
+  static const double _officeLatitude = -6.210932;
+  static const double _officeLongitude = 106.81307;
   static const double _allowedRadius = 50.0; // meter
-  static const int _workStartHour = 8; // Jam masuk kerja (08:00)
-  static const int _workEndHour = 17; // Jam pulang kerja (17:00)
+  static const int _workStartHour = 6; // Jam masuk kerja (08:00)
+  static const int _workEndHour = 15; // Jam pulang kerja (17:00)
 
   const ActionButtonsRow({
     super.key,

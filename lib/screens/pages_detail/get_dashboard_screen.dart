@@ -27,8 +27,8 @@ class GetDashboardScreen extends StatefulWidget {
 class _GetDashboardScreenState extends State<GetDashboardScreen>
     with TickerProviderStateMixin {
   // Koordinat kantor PPKD dan radius
-  static const double _officeLatitude = -6.191020;
-  static const double _officeLongitude = 106.959288;
+  static const double _officeLatitude = -6.210932;
+  static const double _officeLongitude = 106.813075;
   static const double _boundaryRadius = 50.0; // 50 meter radius
 
   final GlobalKey<StatistikDisplayState> _statistikDisplayKey =
