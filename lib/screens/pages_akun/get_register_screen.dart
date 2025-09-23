@@ -1,6 +1,5 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:aplikasi_absen/api/get_api_batch.dart';
@@ -173,7 +172,7 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
                   color: Color(0xFF0D47A1),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Text(
                 "Isi data diri Anda untuk mulai menggunakan aplikasi",
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
@@ -260,17 +259,30 @@ class _GetRegisterScreenState extends State<GetRegisterScreen> {
               // Dropdown untuk Training (opsional), mengambil data dari _trainingOptions
               DropdownButtonFormField<int>(
                 value: _selectedTrainingId,
+                isExpanded: true,
                 items: [
                   // Item pertama sebagai placeholder opsional
                   const DropdownMenuItem<int>(
                     value: null,
-                    child: Text('Pilih Training (opsional)'),
+
+                    child: Text(
+                      'Pilih Training (opsional)',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
                   // Menyebarkan daftar training dari API
                   ..._trainingOptions.map((training) {
                     return DropdownMenuItem<int>(
                       value: training.id,
-                      child: Text(training.title ?? 'Training tidak diketahui'),
+                      child: SizedBox(
+                        width: double.infinity, // 🔑 supaya fleksibel
+                        child: Text(
+                          training.title ?? 'Training tidak diketahui',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
                     );
                   }),
                 ],
