@@ -10,6 +10,8 @@ class ApiEndpoints {
   static const String absenToday = "$baseUrl/absen/today";
   static const String getStatistik = "$baseUrl/absen/stats";
   static const String izin = "$baseUrl/izin";
+  static const String forgot = "$baseUrl/forgot-password";
+  static const String reset = "$baseUrl/reset-password";
   static const String history = "$baseUrl/absen/history";
   static String historyById(String id) => "$baseUrl/absen/$id";
 }

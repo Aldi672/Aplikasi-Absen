@@ -1,7 +1,7 @@
 // widgets/user_profile_card.dart
-import 'package:flutter/material.dart';
 import 'package:aplikasi_absen/models/get_user_models.dart';
 import 'package:aplikasi_absen/screens/pages_content/statistic_display_content.dart';
+import 'package:flutter/material.dart';
 
 class UserProfileCard extends StatelessWidget {
   final GetUser? userData;

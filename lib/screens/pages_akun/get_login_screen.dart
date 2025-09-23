@@ -1,5 +1,6 @@
 import 'package:aplikasi_absen/api/get_api_user.dart';
 import 'package:aplikasi_absen/screens/pages_akun/get_register_screen.dart';
+import 'package:aplikasi_absen/screens/pages_akun/get_reset_password.dart';
 import 'package:aplikasi_absen/screens/pages_detail/get_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -167,7 +168,14 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ForgotPasswordPage(),
+                ),
+              );
+            },
             child: const Text("Forgot Password?"),
           ),
         ),

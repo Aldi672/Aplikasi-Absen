@@ -1,4 +1,6 @@
 // get_dashboard_screen.dart - Updated with Radius Location Validation
+import 'dart:async';
+
 import 'package:aplikasi_absen/api/get_api_absen.dart';
 import 'package:aplikasi_absen/api/get_api_user.dart';
 import 'package:aplikasi_absen/models/get_absen_today_models.dart'
@@ -42,6 +44,9 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
   bool _isCheckingIn = false;
   bool _isCheckingOut = false;
   String _errorMessage = '';
+  final bool _isLocationLoading = true;
+
+  Timer? _locationTimer;
 
   Position? _currentPosition;
   String _currentAddress = "";
@@ -282,23 +287,42 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
     }
   }
 
+  LinearGradient _getDynamicBackgroundGradient() {
+    // Kondisi: Jika sudah check-in DAN belum check-out
+    if (_absenData?.checkInTime != null && _absenData?.checkOutTime == null) {
+      // Kembalikan gradient hijau untuk status "sedang bekerja"
+      return const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF2E7D32), // Green shade
+          Color(0xFF1B5E20), // Darker Green
+          Color(0xFF003300), // Very Dark Green
+          Color(0xFF000000), // Black
+        ],
+        stops: [0.0, 0.3, 0.7, 1.0],
+      );
+    }
+
+    // Kondisi default: Jika belum check-in atau sudah pulang (check-out)
+    return const LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color(0xFF1565C0), // Default Blue
+        Color(0xFF0D47A1),
+        Color(0xFF1A237E),
+        Color(0xFF000000),
+      ],
+      stops: [0.0, 0.3, 0.7, 1.0],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1565C0),
-              Color(0xFF0D47A1),
-              Color(0xFF1A237E),
-              Color(0xFF000000),
-            ],
-            stops: [0.0, 0.3, 0.7, 1.0],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: _getDynamicBackgroundGradient()),
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Stack(
@@ -361,9 +385,9 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                 ],
               ),
               DraggableScrollableSheet(
-                initialChildSize: 0.12,
-                minChildSize: 0.12,
-                maxChildSize: 0.9,
+                initialChildSize: 0.2,
+                minChildSize: 0.2,
+                maxChildSize: 1,
                 builder: (context, scrollController) {
                   return Container(
                     decoration: BoxDecoration(
@@ -381,15 +405,6 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                     ),
                     child: Column(
                       children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[400],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
                         Expanded(
                           child: ListView(
                             controller: scrollController,
