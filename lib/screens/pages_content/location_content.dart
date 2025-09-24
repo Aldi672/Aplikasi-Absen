@@ -18,7 +18,7 @@ class LocationCard extends StatefulWidget {
 
 class LocationCardState extends State<LocationCard>
     with TickerProviderStateMixin {
-  static const LatLng _officeLocation = LatLng(-6.210932, 106.813075);
+  static const LatLng _officeLocation = LatLng(-6.210437, 106.813966);
   static const double _boundaryRadius = 50; // Radius 50 meter
 
   // --- State Variables ---
