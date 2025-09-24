@@ -21,7 +21,8 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
   bool _isDeleting = false;
   String? _deletingId;
 
-  DateTime _selectedDay = DateTime.now();
+  DateTime _startDate = DateTime.now().subtract(const Duration(days: 4));
+  DateTime _endDate = DateTime.now();
 
   @override
   void initState() {
@@ -29,37 +30,23 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
     _initializeLocale();
   }
 
-  // Initialize Indonesian locale first
   Future<void> _initializeLocale() async {
     try {
       await initializeDateFormatting('id_ID', null);
       if (mounted) {
-        setState(() {
-          _isLocaleInitialized = true;
-        });
+        setState(() => _isLocaleInitialized = true);
         fetchHistory();
       }
     } catch (e) {
-      // Fallback to default locale if Indonesian locale fails
       await initializeDateFormatting();
       if (mounted) {
-        setState(() {
-          _isLocaleInitialized = true;
-        });
+        setState(() => _isLocaleInitialized = true);
         fetchHistory();
       }
     }
   }
 
-  void _generateLast5Days() {
-    // Removed - no longer needed
-  }
-
-  void _onCalendarDaySelected(DateTime selectedDate, DateTime focusedDate) {
-    _filterByDate(selectedDate);
-  }
-
-  Future<void> _handleDelete(String id, DateTime date) async {
+  Future<void> _handleDelete(String id) async {
     setState(() {
       _isDeleting = true;
       _deletingId = id;
@@ -71,7 +58,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
       if (response != null && response.data != null) {
         setState(() {
           _historyData.removeWhere((item) => item.id.toString() == id);
-          _filterByDate(date);
+          _filterByRange();
         });
         widget.onDeleteSuccess?.call();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -102,99 +89,47 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
 
   Future<void> fetchHistory() async {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     final result = await HistoryAPI.getHistory();
     if (result != null && result.data != null) {
       setState(() {
         _historyData = result.data!;
-        _filteredHistory = _historyData;
-        _filterByDate(_selectedDay);
+        _filterByRange();
         _isLoading = false;
       });
     } else {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
-  void _filterByDate(DateTime selectedDate) {
+  void _filterByRange() {
     setState(() {
-      _selectedDay = selectedDate;
-
       _filteredHistory = _historyData.where((history) {
         if (history.attendanceDate == null) return false;
-
         final date = DateTime(
           history.attendanceDate!.year,
           history.attendanceDate!.month,
           history.attendanceDate!.day,
         );
-
-        return date ==
-            DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+        return (date.isAtSameMomentAs(_startDate) ||
+            date.isAtSameMomentAs(_endDate) ||
+            (date.isAfter(_startDate) && date.isBefore(_endDate)));
       }).toList();
     });
   }
 
-  String _formatDate(DateTime date) {
-    if (!_isLocaleInitialized) return '...';
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final targetDate = DateTime(date.year, date.month, date.day);
-
-    if (targetDate == today) {
-      return 'Hari Ini';
-    } else if (targetDate == yesterday) {
-      return 'Kemarin';
-    } else {
-      try {
-        return DateFormat('dd MMM', 'id_ID').format(date);
-      } catch (e) {
-        // Fallback to default locale if Indonesian fails
-        return DateFormat('dd MMM').format(date);
-      }
-    }
-  }
-
-  String _formatDayName(DateTime date) {
-    if (!_isLocaleInitialized) return '';
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final targetDate = DateTime(date.year, date.month, date.day);
-
-    if (targetDate == today) {
-      return '';
-    } else {
-      try {
-        return DateFormat('EEE', 'id_ID').format(date);
-      } catch (e) {
-        // Fallback to default locale if Indonesian fails
-        return DateFormat('EEE').format(date);
-      }
-    }
-  }
-
   String _formatFullDate(DateTime date) {
     if (!_isLocaleInitialized) return 'Loading...';
-
     try {
       return DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(date);
     } catch (e) {
-      // Fallback to default locale if Indonesian fails
       return DateFormat('EEEE, dd MMMM yyyy').format(date);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Show loading screen while locale is being initialized
     if (!_isLocaleInitialized) {
       return Container(
         decoration: BoxDecoration(
@@ -230,7 +165,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header dengan gradient
+            // Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -276,7 +211,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Lihat riwayat absensi 5 hari terakhir",
+                    "Lihat riwayat absensi sesuai rentang tanggal",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white.withOpacity(0.9),
@@ -288,7 +223,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
 
             const SizedBox(height: 20),
 
-            // Calendar untuk pilih tanggal
+            // Pilih rentang tanggal
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -318,7 +253,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
                           ),
                           const SizedBox(width: 8),
                           const Text(
-                            "Pilih Tanggal",
+                            "Pilih Rentang Tanggal",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -330,31 +265,46 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade200),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            colorScheme: ColorScheme.light(
-                              primary: Colors.blue.shade600,
-                              onPrimary: Colors.black45,
-                              onSurface: Colors.black87,
-                            ),
-                          ),
-                          child: CalendarDatePicker(
-                            initialDate: _selectedDay,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 365),
-                            ),
-
-                            onDateChanged: (DateTime selectedDate) {
-                              _filterByDate(selectedDate);
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _startDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now(),
+                              );
+                              if (date != null) {
+                                setState(() => _startDate = date);
+                                _filterByRange();
+                              }
                             },
+                            child: Text(
+                              "Mulai: ${DateFormat('dd MMM').format(_startDate)}",
+                              style: const TextStyle(color: Colors.black87),
+                            ),
                           ),
-                        ),
+                          TextButton(
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: _endDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now(),
+                              );
+                              if (date != null) {
+                                setState(() => _endDate = date);
+                                _filterByRange();
+                              }
+                            },
+                            child: Text(
+                              "Selesai: ${DateFormat('dd MMM').format(_endDate)}",
+                              style: const TextStyle(color: Colors.black87),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -382,7 +332,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
                 ),
                 child: Column(
                   children: [
-                    // Header tanggal yang dipilih
+                    // Header tanggal
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -402,7 +352,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            _formatFullDate(_selectedDay),
+                            "${DateFormat('dd MMM').format(_startDate)} - ${DateFormat('dd MMM').format(_endDate)}",
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -445,7 +395,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
                               ),
                               const SizedBox(height: 12),
                               const Text(
-                                "Tidak ada absensi pada tanggal ini",
+                                "Tidak ada absensi pada rentang tanggal ini",
                                 style: TextStyle(
                                   color: Colors.grey,
                                   fontSize: 16,
@@ -519,10 +469,7 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
                               );
 
                               if (confirm == true) {
-                                _handleDelete(
-                                  history.id!.toString(),
-                                  history.attendanceDate!,
-                                );
+                                _handleDelete(history.id!.toString());
                               }
                             },
                           );
@@ -577,7 +524,6 @@ class _HistoryItem extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          // Status icon dengan background
           Container(
             height: 48,
             width: 48,
@@ -587,10 +533,7 @@ class _HistoryItem extends StatelessWidget {
             ),
             child: Icon(statusIcon, color: statusColor, size: 24),
           ),
-
           const SizedBox(width: 16),
-
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -632,8 +575,6 @@ class _HistoryItem extends StatelessWidget {
               ],
             ),
           ),
-
-          // Delete button
           if (onDelete != null)
             isDeleting
                 ? Container(

@@ -56,7 +56,7 @@ class StatistikDisplayState extends State<StatistikDisplay> {
     }
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _StatBox(
           label: "Hadir",

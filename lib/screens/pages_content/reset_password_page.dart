@@ -72,7 +72,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Reset Password"),
-        backgroundColor: const Color(0xff8A2D3B),
+        backgroundColor: const Color.fromARGB(255, 0, 110, 110),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

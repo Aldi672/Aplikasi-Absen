@@ -333,7 +333,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 50),
                         UserProfileCard(
                           userData: userData,
                           statistikDisplayKey: _statistikDisplayKey,
