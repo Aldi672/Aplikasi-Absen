@@ -87,26 +87,7 @@ class SettingContent extends StatelessWidget {
               }
             },
           ),
-          _SettingItemCard(
-            title: "Privasi & Keamanan",
-            subtitle: "Atur kata sandi dan keamanan akun",
-            icon: Icons.lock_outline,
-            iconBgColor: Colors.green.shade100,
-            iconColor: Colors.green.shade800,
-            onTap: () {
-              // Navigasi ke halaman Privasi
-            },
-          ),
-          _SettingItemCard(
-            title: "Bahasa",
-            subtitle: "Pilih bahasa yang digunakan aplikasi",
-            icon: Icons.language_outlined,
-            iconBgColor: Colors.purple.shade100,
-            iconColor: Colors.purple.shade800,
-            onTap: () {
-              // Navigasi ke halaman Bahasa
-            },
-          ),
+
           const SizedBox(height: 16),
           // Logout dibuat sedikit berbeda untuk penekanan
           _SettingItemCard(

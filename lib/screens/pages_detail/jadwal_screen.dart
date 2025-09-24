@@ -1,7 +1,8 @@
 import 'package:aplikasi_absen/api/get_history.dart';
 import 'package:aplikasi_absen/models/get_history_models.dart';
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 class RiwayatAbsensiContent extends StatefulWidget {
   final VoidCallback? onDeleteSuccess;
@@ -15,21 +16,50 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
   List<Datum> _historyData = [];
   List<Datum> _filteredHistory = [];
   bool _isLoading = true;
+  bool _isLocaleInitialized = false;
 
   bool _isDeleting = false;
   String? _deletingId;
 
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
+  DateTime _selectedDay = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    fetchHistory();
+    _initializeLocale();
+  }
+
+  // Initialize Indonesian locale first
+  Future<void> _initializeLocale() async {
+    try {
+      await initializeDateFormatting('id_ID', null);
+      if (mounted) {
+        setState(() {
+          _isLocaleInitialized = true;
+        });
+        fetchHistory();
+      }
+    } catch (e) {
+      // Fallback to default locale if Indonesian locale fails
+      await initializeDateFormatting();
+      if (mounted) {
+        setState(() {
+          _isLocaleInitialized = true;
+        });
+        fetchHistory();
+      }
+    }
+  }
+
+  void _generateLast5Days() {
+    // Removed - no longer needed
+  }
+
+  void _onCalendarDaySelected(DateTime selectedDate, DateTime focusedDate) {
+    _filterByDate(selectedDate);
   }
 
   Future<void> _handleDelete(String id, DateTime date) async {
-    // Set state untuk menampilkan indikator loading
     setState(() {
       _isDeleting = true;
       _deletingId = id;
@@ -39,16 +69,16 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
       final response = await HistoryAPI.deleteHistory(id);
 
       if (response != null && response.data != null) {
-        // Hapus item dari daftar lokal setelah berhasil dari API
         setState(() {
           _historyData.removeWhere((item) => item.id.toString() == id);
-          _filterByDate(date); // Perbarui tampilan setelah menghapus
+          _filterByDate(date);
         });
         widget.onDeleteSuccess?.call();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("✅ Riwayat absensi berhasil dihapus"),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
@@ -59,10 +89,10 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
         SnackBar(
           content: Text("❌ Error: ${e.toString()}"),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
-      // Sembunyikan indikator loading
       setState(() {
         _isDeleting = false;
         _deletingId = null;
@@ -80,8 +110,8 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
     if (result != null && result.data != null) {
       setState(() {
         _historyData = result.data!;
-        _filteredHistory = _historyData; // default tampil semua
-        _filterByDate(_selectedDay ?? DateTime.now());
+        _filteredHistory = _historyData;
+        _filterByDate(_selectedDay);
         _isLoading = false;
       });
     } else {
@@ -94,7 +124,6 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
   void _filterByDate(DateTime selectedDate) {
     setState(() {
       _selectedDay = selectedDate;
-      _focusedDay = selectedDate;
 
       _filteredHistory = _historyData.where((history) {
         if (history.attendanceDate == null) return false;
@@ -111,124 +140,400 @@ class RiwayatAbsensiContentState extends State<RiwayatAbsensiContent> {
     });
   }
 
+  String _formatDate(DateTime date) {
+    if (!_isLocaleInitialized) return '...';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final targetDate = DateTime(date.year, date.month, date.day);
+
+    if (targetDate == today) {
+      return 'Hari Ini';
+    } else if (targetDate == yesterday) {
+      return 'Kemarin';
+    } else {
+      try {
+        return DateFormat('dd MMM', 'id_ID').format(date);
+      } catch (e) {
+        // Fallback to default locale if Indonesian fails
+        return DateFormat('dd MMM').format(date);
+      }
+    }
+  }
+
+  String _formatDayName(DateTime date) {
+    if (!_isLocaleInitialized) return '';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final targetDate = DateTime(date.year, date.month, date.day);
+
+    if (targetDate == today) {
+      return '';
+    } else {
+      try {
+        return DateFormat('EEE', 'id_ID').format(date);
+      } catch (e) {
+        // Fallback to default locale if Indonesian fails
+        return DateFormat('EEE').format(date);
+      }
+    }
+  }
+
+  String _formatFullDate(DateTime date) {
+    if (!_isLocaleInitialized) return 'Loading...';
+
+    try {
+      return DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(date);
+    } catch (e) {
+      // Fallback to default locale if Indonesian fails
+      return DateFormat('EEEE, dd MMMM yyyy').format(date);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 📅 Kalender filter
-          TableCalendar(
-            firstDay: DateTime(2020),
-            lastDay: DateTime(2030),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) =>
-                _selectedDay != null &&
-                day.year == _selectedDay!.year &&
-                day.month == _selectedDay!.month &&
-                day.day == _selectedDay!.day,
-            onDaySelected: (selectedDay, focusedDay) {
-              _filterByDate(selectedDay);
-            },
-            calendarStyle: const CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-              ),
-            ),
+    // Show loading screen while locale is being initialized
+    if (!_isLocaleInitialized) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.blue.shade50, Colors.white],
           ),
-          const SizedBox(height: 16),
-
-          const Padding(
-            padding: EdgeInsets.only(left: 16.0, bottom: 8.0),
-            child: Text(
-              "Riwayat Absensi",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text("Memuat aplikasi...", style: TextStyle(color: Colors.grey)),
+            ],
           ),
+        ),
+      );
+    }
 
-          if (_isLoading)
-            const Center(child: CircularProgressIndicator())
-          else if (_filteredHistory.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(
-                child: Text(
-                  "Tidak ada absensi pada tanggal ini.",
-                  style: TextStyle(color: Colors.grey),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue.shade50, Colors.white],
+        ),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header dengan gradient
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade600, Colors.blue.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    spreadRadius: 1,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true, // biar muat dalam scroll
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredHistory.length,
-              itemBuilder: (context, index) {
-                final history = _filteredHistory[index];
-
-                final String dateText =
-                    "${history.attendanceDate?.toLocal().toString().split(' ')[0]} "
-                    "${history.checkInTime ?? history.checkOutTime ?? ''}";
-
-                final String statusText = history.status == "izin"
-                    ? "Izin"
-                    : history.checkInTime != null &&
-                          history.checkOutTime == null
-                    ? "Absen Masuk"
-                    : history.checkOutTime != null
-                    ? "Absen Keluar"
-                    : "Tidak diketahui";
-
-                return _HistoryItem(
-                  id: history.id!.toString(),
-                  date: dateText,
-                  status: statusText,
-                  alasanIzin: history.alasanIzin,
-                  isFirst: index == 0,
-                  isLast: index == _filteredHistory.length - 1,
-                  isDeleting: _deletingId == history.id!.toString(),
-                  onDelete: () async {
-                    final bool? confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Hapus Absensi?'),
-                        content: const Text(
-                          'Apakah Anda yakin ingin menghapus riwayat absensi ini?',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.history_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        "Riwayat Absensi",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Batal'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Lihat riwayat absensi 5 hari terakhir",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Calendar untuk pilih tanggal
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            color: Colors.blue.shade600,
+                            size: 20,
                           ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(true),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
+                          const SizedBox(width: 8),
+                          const Text(
+                            "Pilih Tanggal",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
                             ),
-                            child: const Text('Hapus'),
                           ),
                         ],
                       ),
-                    );
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: ColorScheme.light(
+                              primary: Colors.blue.shade600,
+                              onPrimary: Colors.black45,
+                              onSurface: Colors.black87,
+                            ),
+                          ),
+                          child: CalendarDatePicker(
+                            initialDate: _selectedDay,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
 
-                    if (confirm == true) {
-                      // Panggil fungsi hapus hanya jika pengguna mengkonfirmasi
-                      _handleDelete(
-                        history.id!.toString(),
-                        history.attendanceDate!,
-                      );
-                    }
-                  },
-                );
-              },
+                            onDateChanged: (DateTime selectedDate) {
+                              _filterByDate(selectedDate);
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-        ],
+
+            const SizedBox(height: 24),
+
+            // Konten riwayat
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Header tanggal yang dipilih
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            color: Colors.blue.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _formatFullDate(_selectedDay),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // List riwayat
+                    if (_isLoading)
+                      Container(
+                        height: 200,
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 16),
+                              Text(
+                                "Memuat data...",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else if (_filteredHistory.isEmpty)
+                      Container(
+                        height: 150,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.event_busy,
+                                size: 48,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                "Tidak ada absensi pada tanggal ini",
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _filteredHistory.length,
+                        separatorBuilder: (context, index) =>
+                            Divider(height: 1, color: Colors.grey.shade200),
+                        itemBuilder: (context, index) {
+                          final history = _filteredHistory[index];
+
+                          final String dateText =
+                              "${history.attendanceDate?.toLocal().toString().split(' ')[0]} "
+                              "${history.checkInTime ?? history.checkOutTime ?? ''}";
+
+                          final String statusText = history.status == "izin"
+                              ? "Izin"
+                              : history.checkInTime != null &&
+                                    history.checkOutTime == null
+                              ? "Absen Masuk"
+                              : history.checkOutTime != null
+                              ? "Absen Keluar"
+                              : "Tidak diketahui";
+
+                          return _HistoryItem(
+                            id: history.id!.toString(),
+                            date: dateText,
+                            status: statusText,
+                            alasanIzin: history.alasanIzin,
+                            isDeleting: _deletingId == history.id!.toString(),
+                            onDelete: () async {
+                              final bool? confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  title: const Text('Hapus Absensi?'),
+                                  content: const Text(
+                                    'Apakah Anda yakin ingin menghapus riwayat absensi ini?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                      child: const Text('Batal'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text('Hapus'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirm == true) {
+                                _handleDelete(
+                                  history.id!.toString(),
+                                  history.attendanceDate!,
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -239,8 +544,6 @@ class _HistoryItem extends StatelessWidget {
   final String date;
   final String status;
   final String? alasanIzin;
-  final bool isFirst;
-  final bool isLast;
   final VoidCallback? onDelete;
   final bool isDeleting;
 
@@ -249,8 +552,6 @@ class _HistoryItem extends StatelessWidget {
     required this.date,
     required this.status,
     this.alasanIzin,
-    required this.isFirst,
-    required this.isLast,
     this.onDelete,
     required this.isDeleting,
   });
@@ -261,127 +562,105 @@ class _HistoryItem extends StatelessWidget {
     final bool isIzin = status.toLowerCase().contains('izin');
 
     final Color statusColor = isIzin
-        ? Colors.blue
+        ? Colors.blue.shade600
         : isMasuk
         ? Colors.green.shade600
-        : Colors.orange.shade800;
+        : Colors.orange.shade600;
 
     final IconData statusIcon = isIzin
-        ? Icons.edit_calendar
+        ? Icons.edit_calendar_rounded
         : isMasuk
-        ? Icons.arrow_downward
-        : Icons.arrow_upward;
+        ? Icons.login_rounded
+        : Icons.logout_rounded;
 
-    return IntrinsicHeight(
+    return Container(
+      padding: const EdgeInsets.all(16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Timeline
-          SizedBox(
-            width: 50,
+          // Status icon dengan background
+          Container(
+            height: 48,
+            width: 48,
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(statusIcon, color: statusColor, size: 24),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Content
+          Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: isFirst ? Colors.transparent : Colors.grey[300],
-                  ),
-                ),
-                Container(
-                  height: 30,
-                  width: 30,
-                  decoration: BoxDecoration(
+                Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                     color: statusColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(statusIcon, color: Colors.white, size: 16),
-                ),
-                Expanded(
-                  child: Container(
-                    width: 2,
-                    color: isLast ? Colors.transparent : Colors.grey[300],
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  date,
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+                if (alasanIzin != null && alasanIzin!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      "Alasan: $alasanIzin",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue.shade700,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
 
-          // Card Info
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: Colors.grey.shade200),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.08),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: statusColor,
-                            ),
-                          ),
-                        ),
-                        if (onDelete != null)
-                          isDeleting
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: onDelete,
-                                ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      date,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Colors.black54,
+          // Delete button
+          if (onDelete != null)
+            isDeleting
+                ? Container(
+                    width: 40,
+                    height: 40,
+                    child: const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                    if (alasanIzin != null && alasanIzin!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        "Alasan: $alasanIzin",
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.blueGrey,
-                          fontStyle: FontStyle.italic,
-                        ),
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red.shade600,
+                        size: 20,
                       ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
+                      onPressed: onDelete,
+                    ),
+                  ),
         ],
       ),
     );
