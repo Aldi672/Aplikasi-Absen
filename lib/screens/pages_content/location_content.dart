@@ -23,7 +23,7 @@ class LocationCardState extends State<LocationCard>
 
   // --- State Variables ---
   Position? currentPosition;
-  String currentAddress = "Mencari lokasi Anda...";
+  String currentAddress = "Klik refresh untuk mendapatkan lokasi";
   String fullAddress = ""; // Untuk alamat lengkap
   bool isLoadingLocation = false;
   bool isLoadingAddress = false;
@@ -38,7 +38,7 @@ class LocationCardState extends State<LocationCard>
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+    // Hapus pemanggilan _getCurrentLocation() agar tidak otomatis load
   }
 
   @override
@@ -278,7 +278,9 @@ class LocationCardState extends State<LocationCard>
             children: [
               Icon(
                 Icons.location_on_rounded,
-                color: _isWithinBoundary() ? Colors.green : Colors.red,
+                color: currentPosition == null
+                    ? Colors.grey
+                    : (_isWithinBoundary() ? Colors.green : Colors.red),
                 size: 28,
               ),
               const SizedBox(width: 16),
@@ -342,31 +344,42 @@ class LocationCardState extends State<LocationCard>
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (_isWithinBoundary() ? Colors.green : Colors.red)
-                            .withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _isWithinBoundary() ? 'DALAM AREA' : 'LUAR AREA',
-                        style: TextStyle(
-                          color: _isWithinBoundary()
-                              ? Colors.green.shade800
-                              : Colors.red.shade800,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                    if (currentPosition != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              (_isWithinBoundary() ? Colors.green : Colors.red)
+                                  .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _isWithinBoundary() ? 'DALAM AREA' : 'LUAR AREA',
+                          style: TextStyle(
+                            color: _isWithinBoundary()
+                                ? Colors.green.shade800
+                                : Colors.red.shade800,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (isLoadingAddress)
+                if (currentPosition == null)
+                  const Text(
+                    'Klik tombol refresh untuk memuat lokasi',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+                else if (isLoadingAddress)
                   const Row(
                     children: [
                       SizedBox(
@@ -404,35 +417,35 @@ class LocationCardState extends State<LocationCard>
                       fontStyle: FontStyle.italic,
                     ),
                   ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.withOpacity(0.1)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Koordinat:',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w600,
+                if (currentPosition != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Koordinat:',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        currentAddress,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black87,
-                          fontFamily: 'monospace',
+                        const SizedBox(height: 4),
+                        Text(
+                          currentAddress,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black87,
+                            fontFamily: 'monospace',
+                          ),
                         ),
-                      ),
-                      if (currentPosition != null) ...[
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -460,9 +473,9 @@ class LocationCardState extends State<LocationCard>
                           ],
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -485,7 +498,12 @@ class LocationCardState extends State<LocationCard>
               children: [
                 GoogleMap(
                   initialCameraPosition: CameraPosition(
-                    target: _officeLocation,
+                    target: currentPosition != null
+                        ? LatLng(
+                            currentPosition!.latitude,
+                            currentPosition!.longitude,
+                          )
+                        : _officeLocation,
                     zoom: 18.0,
                   ),
                   onMapCreated: (controller) => _mapController = controller,
@@ -497,38 +515,40 @@ class LocationCardState extends State<LocationCard>
                   zoomControlsEnabled: false,
                   mapToolbarEnabled: false,
                 ),
-                PulsingBoundaryCircle(
-                  officeLocation: _officeLocation,
-                  boundaryRadius: _boundaryRadius,
-                ),
+                if (currentPosition != null)
+                  PulsingBoundaryCircle(
+                    officeLocation: _officeLocation,
+                    boundaryRadius: _boundaryRadius,
+                  ),
               ],
             ),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildMapControlButton(
-                icon: Icons.my_location,
-                label: 'Lokasi Saya',
-                onPressed: _animateToCurrentLocation,
-                color: Colors.blue,
-              ),
-              _buildMapControlButton(
-                icon: Icons.business,
-                label: 'Lokasi PPKD',
-                onPressed: () {
-                  _mapController?.animateCamera(
-                    CameraUpdate.newLatLngZoom(_officeLocation, 18.0),
-                  );
-                },
-                color: Colors.red,
-              ),
-            ],
+        if (currentPosition != null)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildMapControlButton(
+                  icon: Icons.my_location,
+                  label: 'Lokasi Saya',
+                  onPressed: _animateToCurrentLocation,
+                  color: Colors.blue,
+                ),
+                _buildMapControlButton(
+                  icon: Icons.business,
+                  label: 'Lokasi PPKD',
+                  onPressed: () {
+                    _mapController?.animateCamera(
+                      CameraUpdate.newLatLngZoom(_officeLocation, 18.0),
+                    );
+                  },
+                  color: Colors.red,
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
