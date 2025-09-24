@@ -363,9 +363,9 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                         const SizedBox(height: 24),
 
                         // Enhanced Location Status Card
-                        // _buildEnhancedLocationStatusCard(),
+                        _buildEnhancedLocationStatusCard(),
 
-                        // const SizedBox(height: 24),
+                        const SizedBox(height: 24),
                         ActionButtonsRow(
                           onCheckIn: _handleCheckIn,
                           onCheckOut: _handleCheckOut,
@@ -429,222 +429,222 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
   }
 
   // Method untuk membuat Enhanced Location Status Card
-  // Widget _buildEnhancedLocationStatusCard() {
-  //   return Container(
-  //     margin: const EdgeInsets.symmetric(horizontal: 4),
-  //     padding: const EdgeInsets.all(20),
-  //     decoration: BoxDecoration(
-  //       // Background putih solid untuk kontras yang jelas
-  //       color: Colors.white,
-  //       borderRadius: BorderRadius.circular(16),
-  //       // Shadow yang lebih dramatis
-  //       boxShadow: [
-  //         BoxShadow(
-  //           color: _isUserWithinOfficeRadius()
-  //               ? Colors.green.withOpacity(0.4)
-  //               : Colors.red.withOpacity(0.4),
-  //           blurRadius: 20,
-  //           offset: const Offset(0, 8),
-  //           spreadRadius: 2,
-  //         ),
-  //         BoxShadow(
-  //           color: Colors.black.withOpacity(0.1),
-  //           blurRadius: 10,
-  //           offset: const Offset(0, 4),
-  //         ),
-  //       ],
-  //       // Border yang lebih tebal dan kontras
-  //       border: Border.all(
-  //         color: _isUserWithinOfficeRadius()
-  //             ? Colors.green.shade400
-  //             : Colors.red.shade400,
-  //         width: 3,
-  //       ),
-  //     ),
-  //     // child: Column(
-  //     //   children: [
-  //     //     // Header dengan ikon dan status utama
-  //     //     Row(
-  //     //       children: [
-  //     //         // Container ikon dengan background warna
-  //     //         Container(
-  //     //           width: 56,
-  //     //           height: 56,
-  //     //           decoration: BoxDecoration(
-  //     //             color: _isUserWithinOfficeRadius()
-  //     //                 ? Colors.green.shade500
-  //     //                 : Colors.red.shade500,
-  //     //             borderRadius: BorderRadius.circular(16),
-  //     //             boxShadow: [
-  //     //               BoxShadow(
-  //     //                 color:
-  //     //                     (_isUserWithinOfficeRadius()
-  //     //                             ? Colors.green
-  //     //                             : Colors.red)
-  //     //                         .withOpacity(0.3),
-  //     //                 blurRadius: 8,
-  //     //                 offset: const Offset(0, 4),
-  //     //               ),
-  //     //             ],
-  //     //           ),
-  //     //           child: Icon(
-  //     //             _isUserWithinOfficeRadius()
-  //     //                 ? Icons.verified_user_rounded
-  //     //                 : Icons.location_disabled_rounded,
-  //     //             color: Colors.white,
-  //     //             size: 32,
-  //     //           ),
-  //     //         ),
-  //     //         const SizedBox(width: 16),
-  //     //         // Expanded(
-  //     //         //   child: Column(
-  //     //         //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     //         //     children: [
-  //     //         //       // Status utama dengan font yang lebih besar dan bold
-  //     //         //       Text(
-  //     //         //         _isUserWithinOfficeRadius()
-  //     //         //             ? 'DALAM AREA PPKD'
-  //     //         //             : 'LUAR AREA PPKD',
-  //     //         //         style: TextStyle(
-  //     //         //           fontWeight: FontWeight.w800,
-  //     //         //           color: _isUserWithinOfficeRadius()
-  //     //         //               ? Colors.green.shade700
-  //     //         //               : Colors.red.shade700,
-  //     //         //           fontSize: 18,
-  //     //         //           letterSpacing: 0.5,
-  //     //         //         ),
-  //     //         //       ),
-  //     //         //       const SizedBox(height: 4),
-  //     //         //       // Sub-status dengan informasi jarak
-  //     //         //       Text(
-  //     //         //         _currentPosition != null
-  //     //         //             ? 'Jarak: ${_getDistanceToOffice().toStringAsFixed(1)}m dari PPKD'
-  //     //         //             : 'Menunggu data lokasi...',
-  //     //         //         style: TextStyle(
-  //     //         //           fontSize: 14,
-  //     //         //           color: Colors.grey[700],
-  //     //         //           fontWeight: FontWeight.w500,
-  //     //         //         ),
-  //     //         //       ),
-  //     //         //     ],
-  //     //         //   ),
-  //     //         // ),
-  //     //         // Badge status dengan warna kontras
-  //     //         Container(
-  //     //           padding: const EdgeInsets.symmetric(
-  //     //             horizontal: 12,
-  //     //             vertical: 6,
-  //     //           ),
-  //     //           decoration: BoxDecoration(
-  //     //             color: _isUserWithinOfficeRadius()
-  //     //                 ? Colors.green.shade500
-  //     //                 : Colors.red.shade500,
-  //     //             borderRadius: BorderRadius.circular(20),
-  //     //             boxShadow: [
-  //     //               BoxShadow(
-  //     //                 color:
-  //     //                     (_isUserWithinOfficeRadius()
-  //     //                             ? Colors.green
-  //     //                             : Colors.red)
-  //     //                         .withOpacity(0.3),
-  //     //                 blurRadius: 4,
-  //     //                 offset: const Offset(0, 2),
-  //     //               ),
-  //     //             ],
-  //     //           ),
-  //     //           child: Text(
-  //     //             _isUserWithinOfficeRadius() ? 'AKTIF' : 'NON-AKTIF',
-  //     //             style: const TextStyle(
-  //     //               color: Colors.white,
-  //     //               fontSize: 11,
-  //     //               fontWeight: FontWeight.w700,
-  //     //               letterSpacing: 0.5,
-  //     //             ),
-  //     //           ),
-  //     //         ),
-  //     //       ],
-  //     //     ),
+  Widget _buildEnhancedLocationStatusCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        // Background putih solid untuk kontras yang jelas
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        // Shadow yang lebih dramatis
+        boxShadow: [
+          BoxShadow(
+            color: _isUserWithinOfficeRadius()
+                ? Colors.green.withOpacity(0.4)
+                : Colors.red.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        // Border yang lebih tebal dan kontras
+        border: Border.all(
+          color: _isUserWithinOfficeRadius()
+              ? Colors.green.shade400
+              : Colors.red.shade400,
+          width: 3,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Header dengan ikon dan status utama
+          Row(
+            children: [
+              // Container ikon dengan background warna
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: _isUserWithinOfficeRadius()
+                      ? Colors.green.shade500
+                      : Colors.red.shade500,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          (_isUserWithinOfficeRadius()
+                                  ? Colors.green
+                                  : Colors.red)
+                              .withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  _isUserWithinOfficeRadius()
+                      ? Icons.verified_user_rounded
+                      : Icons.location_disabled_rounded,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Status utama dengan font yang lebih besar dan bold
+                    Text(
+                      _isUserWithinOfficeRadius()
+                          ? 'DALAM AREA PPKD'
+                          : 'LUAR AREA PPKD',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: _isUserWithinOfficeRadius()
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                        fontSize: 18,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Sub-status dengan informasi jarak
+                    Text(
+                      _currentPosition != null
+                          ? 'Jarak: ${_getDistanceToOffice().toStringAsFixed(1)}m dari PPKD'
+                          : 'Menunggu data lokasi...',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Badge status dengan warna kontras
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _isUserWithinOfficeRadius()
+                      ? Colors.green.shade500
+                      : Colors.red.shade500,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          (_isUserWithinOfficeRadius()
+                                  ? Colors.green
+                                  : Colors.red)
+                              .withOpacity(0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  _isUserWithinOfficeRadius() ? 'AKTIF' : 'NON-AKTIF',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-  //     //     const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-  //     //     // Informasi detail dengan background berwarna
-  //     //     Container(
-  //     //       width: double.infinity,
-  //     //       padding: const EdgeInsets.all(16),
-  //     //       decoration: BoxDecoration(
-  //     //         color: _isUserWithinOfficeRadius()
-  //     //             ? Colors.green.shade50
-  //     //             : Colors.red.shade50,
-  //     //         borderRadius: BorderRadius.circular(12),
-  //     //         border: Border.all(
-  //     //           color: _isUserWithinOfficeRadius()
-  //     //               ? Colors.green.shade200
-  //     //               : Colors.red.shade200,
-  //     //           width: 1,
-  //     //         ),
-  //     //       ),
-  //     //       child: Row(
-  //     //         children: [
-  //     //           // Ikon informasi
-  //     //           Container(
-  //     //             width: 32,
-  //     //             height: 32,
-  //     //             decoration: BoxDecoration(
-  //     //               color: _isUserWithinOfficeRadius()
-  //     //                   ? Colors.green.shade100
-  //     //                   : Colors.red.shade100,
-  //     //               borderRadius: BorderRadius.circular(8),
-  //     //             ),
-  //     //             child: Icon(
-  //     //               _isUserWithinOfficeRadius()
-  //     //                   ? Icons.check_circle_rounded
-  //     //                   : Icons.warning_rounded,
-  //     //               color: _isUserWithinOfficeRadius()
-  //     //                   ? Colors.green.shade600
-  //     //                   : Colors.red.shade600,
-  //     //               size: 20,
-  //     //             ),
-  //     //           ),
-  //     //           const SizedBox(width: 12),
-  //     //           Expanded(
-  //     //             child: Column(
-  //     //               crossAxisAlignment: CrossAxisAlignment.start,
-  //     //               children: [
-  //     //                 Text(
-  //     //                   _isUserWithinOfficeRadius()
-  //     //                       ? 'Lokasi Valid untuk Absensi'
-  //     //                       : 'Mohon Dekati Area PPKD',
-  //     //                   style: TextStyle(
-  //     //                     fontWeight: FontWeight.w600,
-  //     //                     color: _isUserWithinOfficeRadius()
-  //     //                         ? Colors.green.shade700
-  //     //                         : Colors.red.shade700,
-  //     //                     fontSize: 14,
-  //     //                   ),
-  //     //                 ),
-  //     //                 const SizedBox(height: 2),
-  //     //                 Text(
-  //     //                   _isUserWithinOfficeRadius()
-  //     //                       ? 'Anda dapat melakukan check-in/check-out'
-  //     //                       : 'Batas maksimal: 50 meter dari kantor',
-  //     //                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-  //     //                 ),
-  //     //               ],
-  //     //             ),
-  //     //           ),
-  //     //         ],
-  //     //       ),
-  //     //     ),
+          // Informasi detail dengan background berwarna
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _isUserWithinOfficeRadius()
+                  ? Colors.green.shade50
+                  : Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isUserWithinOfficeRadius()
+                    ? Colors.green.shade200
+                    : Colors.red.shade200,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                // Ikon informasi
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: _isUserWithinOfficeRadius()
+                        ? Colors.green.shade100
+                        : Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _isUserWithinOfficeRadius()
+                        ? Icons.check_circle_rounded
+                        : Icons.warning_rounded,
+                    color: _isUserWithinOfficeRadius()
+                        ? Colors.green.shade600
+                        : Colors.red.shade600,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isUserWithinOfficeRadius()
+                            ? 'Lokasi Valid untuk Absensi'
+                            : 'Mohon Dekati Area PPKD',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: _isUserWithinOfficeRadius()
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _isUserWithinOfficeRadius()
+                            ? 'Anda dapat melakukan check-in/check-out'
+                            : 'Batas maksimal: 50 meter dari kantor',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-  //     //     // Progress bar untuk visualisasi jarak
-  //     //     if (_currentPosition != null) ...[
-  //     //       const SizedBox(height: 12),
-  //     //       _buildDistanceProgressBar(),
-  //     //     ],
-  //     //   ],
-  //     // ),
-  //   );
-  // }
+          // Progress bar untuk visualisasi jarak
+          if (_currentPosition != null) ...[
+            const SizedBox(height: 12),
+            _buildDistanceProgressBar(),
+          ],
+        ],
+      ),
+    );
+  }
 
   // Method untuk membuat Progress Bar jarak
   Widget _buildDistanceProgressBar() {
