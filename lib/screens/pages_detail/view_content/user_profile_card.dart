@@ -110,41 +110,23 @@ class UserProfileCard extends StatelessWidget {
 
                       // Training Title
                       if (userData?.data?.trainingTitle != null)
-                        Text(
-                          userData!.data!.trainingTitle!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
+                        Container(
+                          width: 200,
+                          child: Text(
+                            userData!.data!.trainingTitle!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
 
                       const SizedBox(height: 8),
 
                       // Batch Badge
-                      if (userData?.data?.batchKe != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Batch ${userData!.data!.batchKe}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -153,32 +135,32 @@ class UserProfileCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 20),
+            // const SizedBox(height: 20),
 
-            // Divider
-            Container(
-              height: 1,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.transparent,
-                    Colors.grey.withOpacity(0.3),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
+            // // Divider
+            // Container(
+            //   height: 1,
+            //   decoration: BoxDecoration(
+            //     gradient: LinearGradient(
+            //       colors: [
+            //         Colors.transparent,
+            //         Colors.grey.withOpacity(0.3),
+            //         Colors.transparent,
+            //       ],
+            //     ),
+            //   ),
+            // ),
 
-            const SizedBox(height: 16),
+            // const SizedBox(height: 16),
 
             // Statistics Display
-            if (isLoading)
-              const SizedBox(
-                height: 60,
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              )
-            else
-              StatistikDisplay(key: statistikDisplayKey),
+            // if (isLoading)
+            //   const SizedBox(
+            //     height: 60,
+            //     child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            //   )
+            // else
+            //   StatistikDisplay(key: statistikDisplayKey),
           ],
         ),
       ),

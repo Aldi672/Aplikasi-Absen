@@ -1,4 +1,4 @@
-// get_dashboard_screen.dart - Updated with Radius Location Validation
+// get_dashboard_screen.dart - Updated with Conditional Location Card
 import 'dart:async';
 
 import 'package:aplikasi_absen/api/get_api_absen.dart';
@@ -287,42 +287,18 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
     }
   }
 
-  LinearGradient _getDynamicBackgroundGradient() {
-    // Kondisi: Jika sudah check-in DAN belum check-out
-    if (_absenData?.checkInTime != null && _absenData?.checkOutTime == null) {
-      // Kembalikan gradient hijau untuk status "sedang bekerja"
-      return const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color(0xFF2E7D32), // Green shade
-          Color(0xFF1B5E20), // Darker Green
-          Color(0xFF003300), // Very Dark Green
-          Color(0xFF000000), // Black
-        ],
-        stops: [0.0, 0.3, 0.7, 1.0],
-      );
-    }
-
-    // Kondisi default: Jika belum check-in atau sudah pulang (check-out)
-    return const LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [
-        Color(0xFF1565C0), // Default Blue
-        Color(0xFF0D47A1),
-        Color(0xFF1A237E),
-        Color(0xFF000000),
-      ],
-      stops: [0.0, 0.3, 0.7, 1.0],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black54,
       body: Container(
-        decoration: BoxDecoration(gradient: _getDynamicBackgroundGradient()),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF3A86FF), Color(0xFF2C8DE0)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Stack(
@@ -333,7 +309,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
-                        const SizedBox(height: 50),
+                        const SizedBox(height: 30),
                         UserProfileCard(
                           userData: userData,
                           statistikDisplayKey: _statistikDisplayKey,
@@ -365,7 +341,8 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                         // Enhanced Location Status Card
                         _buildEnhancedLocationStatusCard(),
 
-                        const SizedBox(height: 24),
+                        if (!_isUserWithinOfficeRadius())
+                          const SizedBox(height: 24),
                         ActionButtonsRow(
                           onCheckIn: _handleCheckIn,
                           onCheckOut: _handleCheckOut,
@@ -428,21 +405,23 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
     );
   }
 
-  // Method untuk membuat Enhanced Location Status Card
+  // --- PERUBAHAN UTAMA DI SINI ---
   Widget _buildEnhancedLocationStatusCard() {
+    // Jika user berada DI DALAM radius kantor, jangan tampilkan apa-apa (widget kosong)
+    if (_isUserWithinOfficeRadius()) {
+      return const SizedBox.shrink();
+    }
+
+    // Jika user berada DI LUAR radius kantor, tampilkan kartu peringatan
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        // Background putih solid untuk kontras yang jelas
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        // Shadow yang lebih dramatis
         boxShadow: [
           BoxShadow(
-            color: _isUserWithinOfficeRadius()
-                ? Colors.green.withOpacity(0.4)
-                : Colors.red.withOpacity(0.4),
+            color: Colors.red.withOpacity(0.4), // Selalu merah
             blurRadius: 20,
             offset: const Offset(0, 8),
             spreadRadius: 2,
@@ -453,44 +432,31 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
             offset: const Offset(0, 4),
           ),
         ],
-        // Border yang lebih tebal dan kontras
         border: Border.all(
-          color: _isUserWithinOfficeRadius()
-              ? Colors.green.shade400
-              : Colors.red.shade400,
+          color: Colors.red.shade400, // Selalu merah
           width: 3,
         ),
       ),
       child: Column(
         children: [
-          // Header dengan ikon dan status utama
           Row(
             children: [
-              // Container ikon dengan background warna
               Container(
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: _isUserWithinOfficeRadius()
-                      ? Colors.green.shade500
-                      : Colors.red.shade500,
+                  color: Colors.red.shade500, // Selalu merah
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          (_isUserWithinOfficeRadius()
-                                  ? Colors.green
-                                  : Colors.red)
-                              .withOpacity(0.3),
+                      color: Colors.red.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                child: Icon(
-                  _isUserWithinOfficeRadius()
-                      ? Icons.verified_user_rounded
-                      : Icons.location_disabled_rounded,
+                child: const Icon(
+                  Icons.location_disabled_rounded, // Selalu ikon non-aktif
                   color: Colors.white,
                   size: 32,
                 ),
@@ -500,22 +466,16 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Status utama dengan font yang lebih besar dan bold
                     Text(
-                      _isUserWithinOfficeRadius()
-                          ? 'DALAM AREA PPKD'
-                          : 'LUAR AREA PPKD',
+                      'LUAR AREA PPKD', // Selalu teks non-aktif
                       style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        color: _isUserWithinOfficeRadius()
-                            ? Colors.green.shade700
-                            : Colors.red.shade700,
+                        color: Colors.red.shade700,
                         fontSize: 18,
                         letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    // Sub-status dengan informasi jarak
                     Text(
                       _currentPosition != null
                           ? 'Jarak: ${_getDistanceToOffice().toStringAsFixed(1)}m dari PPKD'
@@ -529,32 +489,25 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                   ],
                 ),
               ),
-              // Badge status dengan warna kontras
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: _isUserWithinOfficeRadius()
-                      ? Colors.green.shade500
-                      : Colors.red.shade500,
+                  color: Colors.red.shade500, // Selalu merah
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color:
-                          (_isUserWithinOfficeRadius()
-                                  ? Colors.green
-                                  : Colors.red)
-                              .withOpacity(0.3),
+                      color: Colors.red.withOpacity(0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                child: Text(
-                  _isUserWithinOfficeRadius() ? 'AKTIF' : 'NON-AKTIF',
-                  style: const TextStyle(
+                child: const Text(
+                  'NON-AKTIF', // Selalu teks non-aktif
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -564,44 +517,30 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // Informasi detail dengan background berwarna
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _isUserWithinOfficeRadius()
-                  ? Colors.green.shade50
-                  : Colors.red.shade50,
+              color: Colors.red.shade50, // Selalu merah
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _isUserWithinOfficeRadius()
-                    ? Colors.green.shade200
-                    : Colors.red.shade200,
+                color: Colors.red.shade200, // Selalu merah
                 width: 1,
               ),
             ),
             child: Row(
               children: [
-                // Ikon informasi
                 Container(
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: _isUserWithinOfficeRadius()
-                        ? Colors.green.shade100
-                        : Colors.red.shade100,
+                    color: Colors.red.shade100, // Selalu merah
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    _isUserWithinOfficeRadius()
-                        ? Icons.check_circle_rounded
-                        : Icons.warning_rounded,
-                    color: _isUserWithinOfficeRadius()
-                        ? Colors.green.shade600
-                        : Colors.red.shade600,
+                    Icons.warning_rounded, // Selalu ikon warning
+                    color: Colors.red.shade600,
                     size: 20,
                   ),
                 ),
@@ -611,22 +550,16 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isUserWithinOfficeRadius()
-                            ? 'Lokasi Valid untuk Absensi'
-                            : 'Mohon Dekati Area PPKD',
+                        'Mohon Dekati Area PPKD', // Selalu teks non-aktif
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: _isUserWithinOfficeRadius()
-                              ? Colors.green.shade700
-                              : Colors.red.shade700,
+                          color: Colors.red.shade700,
                           fontSize: 14,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _isUserWithinOfficeRadius()
-                            ? 'Anda dapat melakukan check-in/check-out'
-                            : 'Batas maksimal: 50 meter dari kantor',
+                        'Batas maksimal: 50 meter dari kantor',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
@@ -635,8 +568,6 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
               ],
             ),
           ),
-
-          // Progress bar untuk visualisasi jarak
           if (_currentPosition != null) ...[
             const SizedBox(height: 12),
             _buildDistanceProgressBar(),
@@ -672,9 +603,7 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: _isUserWithinOfficeRadius()
-                    ? Colors.green.shade700
-                    : Colors.red.shade700,
+                color: Colors.red.shade700, // Selalu merah
               ),
             ),
           ],
@@ -695,18 +624,16 @@ class _GetDashboardScreenState extends State<GetDashboardScreen>
                     height: 8,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: _isUserWithinOfficeRadius()
-                            ? [Colors.green.shade400, Colors.green.shade600]
-                            : [Colors.red.shade400, Colors.red.shade600],
+                        colors: [
+                          Colors.red.shade400,
+                          Colors.red.shade600,
+                        ], // Selalu merah
                       ),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  // Marker untuk batas 50m
                   Positioned(
-                    left:
-                        constraints.maxWidth *
-                        0.5, // 50% untuk 50m dari 100m max
+                    left: constraints.maxWidth * 0.5,
                     child: Container(
                       width: 2,
                       height: 8,

@@ -118,7 +118,7 @@ class _GetLoginScreenState extends State<GetLoginScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                "Attendify",
+                "Addsi",
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
